@@ -688,8 +688,10 @@ public class MainActivity extends EspActivity {
         mPreferences.edit().putBoolean(PREF_YAW_LOCKED, locked).apply();
         // Preserve the original control convention: gray means yaw is locked,
         // cyan means the yaw axis is enabled.
-        mJoystickLeftHLock.setBackgroundResource(locked ? R.drawable.custom_button :
-                R.drawable.custom_button_seledted);
+        int background = locked ? R.drawable.custom_button : R.drawable.custom_button_seledted;
+        // Match the connection button's background path so MaterialComponents
+        // cannot tint or remeasure the oval around the horizontal icon.
+        mJoystickLeftHLock.setBackgroundDrawable(getResources().getDrawable(background));
     }
 
     private void setCarefreeMode(boolean enabled) {

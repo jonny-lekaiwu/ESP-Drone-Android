@@ -87,6 +87,7 @@ public class MainActivity extends EspActivity {
     private static final int MY_PERMISSIONS_REQUEST_LOCATION = 42;
     private static final String PREF_CAREFREE_MODE = "tinydrone_carefree_mode";
     private static final String PREF_YAW_LOCKED = "tinydrone_yaw_locked";
+    private static final String PREF_FLIGHT_MODE_DEFAULTS_V2 = "tinydrone_flight_mode_defaults_v2";
 
     private JoystickView mJoystickViewLeft;
     private JoystickView mJoystickViewRight;
@@ -161,6 +162,15 @@ public class MainActivity extends EspActivity {
             }
         });
         mCarefreeModeToggle = (TextView) findViewById(R.id.carefree_mode_toggle);
+        if (!mPreferences.getBoolean(PREF_FLIGHT_MODE_DEFAULTS_V2, false)) {
+            // Establish the TinyDrone defaults once for both new installs and
+            // upgrades from versions that stored the earlier experimental state.
+            mPreferences.edit()
+                    .putBoolean(PREF_CAREFREE_MODE, false)
+                    .putBoolean(PREF_YAW_LOCKED, true)
+                    .putBoolean(PREF_FLIGHT_MODE_DEFAULTS_V2, true)
+                    .apply();
+        }
         mCarefreeMode = mPreferences.getBoolean(PREF_CAREFREE_MODE, false);
         mCarefreeModeToggle.setOnClickListener(new View.OnClickListener() {
             @Override

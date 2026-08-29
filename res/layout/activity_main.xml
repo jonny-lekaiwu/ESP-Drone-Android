@@ -195,38 +195,33 @@
         android:layout_toRightOf="@+id/video_view"
         android:gravity="bottom" />
 
-    <RelativeLayout
-        android:id="@+id/flight_mode_controls"
+    <ImageButton
+        android:id="@+id/joystick_left_hlock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@id/joystick_left"
+        android:layout_alignParentTop="true"
         android:layout_alignStart="@id/joystick_left"
         android:layout_alignLeft="@id/joystick_left"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
-        android:translationY="48dp">
+        android:layout_marginTop="53dp"
+        android:background="@drawable/custom_button_seledted"
+        android:src="@drawable/ic_horizontal" />
 
-        <ImageButton
-            android:id="@+id/joystick_left_hlock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/custom_button_seledted"
-            android:src="@drawable/ic_horizontal" />
-
-        <TextView
-            android:id="@+id/carefree_mode_toggle"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_toEndOf="@id/joystick_left_hlock"
-            android:layout_toRightOf="@id/joystick_left_hlock"
-            android:layout_marginStart="12dp"
-            android:layout_marginLeft="12dp"
-            android:background="@drawable/custom_button"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center"
-            android:text="@string/carefree_mode_short"
-            android:textColor="#000000"
-            android:textSize="10sp" />
-    </RelativeLayout>
+    <TextView
+        android:id="@+id/carefree_mode_toggle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignTop="@id/joystick_left_hlock"
+        android:layout_toEndOf="@id/joystick_left_hlock"
+        android:layout_toRightOf="@id/joystick_left_hlock"
+        android:layout_marginStart="12dp"
+        android:layout_marginLeft="12dp"
+        android:background="@drawable/custom_button"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center"
+        android:text="@string/carefree_mode_short"
+        android:textColor="#000000"
+        android:textSize="10sp" />
 </RelativeLayout>

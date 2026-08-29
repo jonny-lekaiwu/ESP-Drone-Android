@@ -10,6 +10,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -41,6 +42,8 @@ public final class UdpVideoReceiver extends Thread {
     private final BlockingQueue<FrameBuffer> mDecodeFrames = new ArrayBlockingQueue<>(1);
     private volatile DatagramSocket mSocket;
     private volatile Thread mDecoderThread;
+    private volatile boolean mVideoExpected;
+    private volatile long mVideoExpectedSince;
 
     public UdpVideoReceiver(Listener listener) {
         super("TinyDrone-video-rx");
@@ -57,6 +60,11 @@ public final class UdpVideoReceiver extends Thread {
         if (socket != null) socket.close();
     }
 
+    public void setVideoExpected(boolean expected) {
+        mVideoExpected = expected;
+        mVideoExpectedSince = expected ? System.currentTimeMillis() : 0;
+    }
+
     @Override public void run() {
         startDecoder();
         byte[] datagram = new byte[PACKET_SIZE];
@@ -64,20 +72,27 @@ public final class UdpVideoReceiver extends Thread {
         FrameBuffer activeFrame = null;
         long currentFrameId = -1;
         int frameSize = 0, expectedPackets = 0, receivedPackets = 0;
-        boolean sawPacket = false;
+        long lastCompleteFrameAt = System.currentTimeMillis();
+        long lastProblemReportAt = 0;
 
         try {
             DatagramSocket socket = bindVideoSocket();
             if (socket == null) return;
-            mListener.onVideoStatus("UDP 5000 listening - tap Connect");
+            socket.setSoTimeout(1000);
             DatagramPacket packet = new DatagramPacket(datagram, datagram.length);
 
             while (!isInterrupted() && !socket.isClosed()) {
                 packet.setLength(datagram.length);
-                socket.receive(packet);
-                if (!sawPacket) {
-                    sawPacket = true;
-                    mListener.onVideoStatus("Receiving video packets");
+                try {
+                    socket.receive(packet);
+                } catch (SocketTimeoutException timeout) {
+                    long now = System.currentTimeMillis();
+                    if (mVideoExpected && now - mVideoExpectedSince > 3000 &&
+                            now - lastCompleteFrameAt > 3000 && now - lastProblemReportAt > 1000) {
+                        lastProblemReportAt = now;
+                        mListener.onVideoStatus("No UDP video packets - reconnecting");
+                    }
+                    continue;
                 }
                 if (packet.getLength() == HEADER_SIZE) {
                     ByteBuffer failure = ByteBuffer.wrap(packet.getData(), 0, HEADER_SIZE)
@@ -102,15 +117,23 @@ public final class UdpVideoReceiver extends Thread {
                         totalPackets != (totalSizeLong + PAYLOAD_SIZE - 1) / PAYLOAD_SIZE ||
                         sequence >= totalPackets || dataLength == 0 || dataLength > PAYLOAD_SIZE ||
                         dataLength != actualLength) {
-                    mListener.onVideoStatus("Invalid video packet header");
+                    long now = System.currentTimeMillis();
+                    if (now - lastCompleteFrameAt > 3000 && now - lastProblemReportAt > 1000) {
+                        lastProblemReportAt = now;
+                        mListener.onVideoStatus("Invalid video packet header");
+                    }
                     continue;
                 }
 
                 if (frameId != currentFrameId) {
                     if (activeFrame != null) {
                         mFreeFrames.offer(activeFrame);
-                        if (receivedPackets != expectedPackets)
+                        long now = System.currentTimeMillis();
+                        if (receivedPackets != expectedPackets && now - lastCompleteFrameAt > 3000 &&
+                                now - lastProblemReportAt > 1000) {
+                            lastProblemReportAt = now;
                             mListener.onVideoStatus("Video packet loss - waiting for next frame");
+                        }
                     }
                     activeFrame = mFreeFrames.poll();
                     currentFrameId = frameId;
@@ -136,6 +159,7 @@ public final class UdpVideoReceiver extends Thread {
                     if ((activeFrame.data[0] & 0xff) == 0xff && (activeFrame.data[1] & 0xff) == 0xd8 &&
                             (activeFrame.data[frameSize - 2] & 0xff) == 0xff &&
                             (activeFrame.data[frameSize - 1] & 0xff) == 0xd9) {
+                        lastCompleteFrameAt = System.currentTimeMillis();
                         FrameBuffer stale = mDecodeFrames.poll();
                         if (stale != null) mFreeFrames.offer(stale);
                         mDecodeFrames.offer(activeFrame);

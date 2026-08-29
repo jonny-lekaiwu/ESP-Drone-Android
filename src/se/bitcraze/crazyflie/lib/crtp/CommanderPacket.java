@@ -48,10 +48,10 @@ public class CommanderPacket extends CrtpPacket {
      * @param thrust (0-65535)
      * @param clientXmode if true, then roll and pitch values are recalculated before sending them to the Crazyflie
      */
-    public CommanderPacket(float roll, float pitch, float yaw, char thrust, boolean clientXmode) {
-        // Tiny-Drone-Controller uses CRTP header reserved bit 0 as its carefree flag.
-        // The UI's unchecked X-mode state maps to carefree/headless operation.
-        super(0, CrtpPort.COMMANDER, clientXmode ? 0 : 1);
+    public CommanderPacket(float roll, float pitch, float yaw, char thrust,
+                           boolean clientXmode, boolean carefree) {
+        // Tiny-Drone uses CRTP header reserved bit 0 as its carefree flag.
+        super(0, CrtpPort.COMMANDER, carefree ? 1 : 0);
         this.mClientXmode = clientXmode;
 
         if (this.mClientXmode) {
@@ -64,6 +64,10 @@ public class CommanderPacket extends CrtpPacket {
         }
         this.mYaw = yaw;
         this.mThrust = thrust;
+    }
+
+    public CommanderPacket(float roll, float pitch, float yaw, char thrust, boolean clientXmode) {
+        this(roll, pitch, yaw, thrust, clientXmode, false);
     }
 
     /**

@@ -97,6 +97,17 @@
 
     <!-- HEADER end -->
 
+    <CheckBox
+        android:id="@+id/carefree_mode_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="2dp"
+        android:buttonTint="#1976D2"
+        android:text="@string/carefree_mode"
+        android:textSize="13sp" />
+
     <ImageButton
         android:id="@+id/button_ledRing"
         android:layout_width="wrap_content"
@@ -151,8 +162,8 @@
 
     <ImageView
         android:id="@+id/video_view"
-        android:layout_width="240dp"
-        android:layout_height="180dp"
+        android:layout_width="280dp"
+        android:layout_height="210dp"
         android:layout_below="@+id/flightdataview"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="8dp"
@@ -162,15 +173,16 @@
 
     <TextView
         android:id="@+id/video_status"
-        android:layout_width="220dp"
-        android:layout_height="180dp"
+        android:layout_width="260dp"
+        android:layout_height="210dp"
         android:layout_alignLeft="@id/video_view"
         android:layout_alignRight="@id/video_view"
         android:layout_alignTop="@id/video_view"
         android:gravity="center"
         android:text="@string/video_waiting"
         android:textColor="#FFFFFF"
-        android:textSize="13sp" />
+        android:textSize="13sp"
+        android:visibility="gone" />
 
     <com.MobileAnarchy.Android.Widgets.Joystick.JoystickView
         android:id="@+id/joystick_left"

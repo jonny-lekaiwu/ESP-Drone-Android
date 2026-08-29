@@ -74,6 +74,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -84,11 +86,14 @@ public class MainActivity extends EspActivity {
 
     private static final String LOG_TAG = "CrazyflieControl";
     private static final int MY_PERMISSIONS_REQUEST_LOCATION = 42;
+    private static final String PREF_CAREFREE_MODE = "tinydrone_carefree_mode";
 
     private JoystickView mJoystickViewLeft;
     private JoystickView mJoystickViewRight;
     private FlightDataView mFlightDataView;
     private ImageButton mJoystickLeftHLock;
+    private CheckBox mCarefreeModeToggle;
+    private volatile boolean mCarefreeMode;
 
     private ImageView mVideoView;
     private TextView mVideoStatusView;
@@ -150,11 +155,24 @@ public class MainActivity extends EspActivity {
             @Override
             public void onClick(View v) {
                 boolean targetState = !mJoystickViewLeft.isHorizontalLocked();
-                mJoystickViewLeft.setHorizontalLocked(targetState);
-                mJoystickLeftHLock.setBackgroundResource(targetState ? R.drawable.custom_button :
-                        R.drawable.custom_button_seledted);
+                setYawLocked(targetState);
+                if (targetState && mCarefreeModeToggle.isChecked()) {
+                    mCarefreeModeToggle.setChecked(false);
+                }
             }
         });
+        mCarefreeModeToggle = (CheckBox) findViewById(R.id.carefree_mode_toggle);
+        mCarefreeModeToggle.setChecked(mPreferences.getBoolean(PREF_CAREFREE_MODE, false));
+        mCarefreeModeToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean checked) {
+                mCarefreeMode = checked;
+                mPreferences.edit().putBoolean(PREF_CAREFREE_MODE, checked).apply();
+                if (checked) setYawLocked(false);
+            }
+        });
+        mCarefreeMode = mCarefreeModeToggle.isChecked();
+        if (mCarefreeMode) setYawLocked(false);
 
         //initialize gamepad controller
         mGamepadController = new GamepadController(mControls, this, mPreferences);
@@ -168,7 +186,7 @@ public class MainActivity extends EspActivity {
 
         mVideoView = (ImageView) findViewById(R.id.video_view);
         mVideoStatusView = (TextView) findViewById(R.id.video_status);
-        startVideoReceiver();
+        ensureVideoReceiver();
 
         //action buttons
         mRingEffectButton = (ImageButton) findViewById(R.id.button_ledRing);
@@ -390,6 +408,7 @@ public class MainActivity extends EspActivity {
         mJoystickViewRight.setPreferences(mPreferences);
         mControls.setControlConfig();
         mGamepadController.setControlConfig();
+        if (mCarefreeMode) setYawLocked(false);
         resetInputMethod();
         checkScreenLock();
         checkConsole();
@@ -657,7 +676,18 @@ public class MainActivity extends EspActivity {
         });
     }
 
-    private void startVideoReceiver() {
+    private void setYawLocked(boolean locked) {
+        mJoystickViewLeft.setHorizontalLocked(locked);
+        mJoystickLeftHLock.setBackgroundResource(locked ? R.drawable.custom_button :
+                R.drawable.custom_button_seledted);
+    }
+
+    public boolean isCarefreeMode() {
+        return mCarefreeMode;
+    }
+
+    public synchronized void ensureVideoReceiver() {
+        if (mVideoReceiver != null && mVideoReceiver.isAlive()) return;
         mVideoReceiver = new UdpVideoReceiver(new UdpVideoReceiver.Listener() {
             @Override
             public void onVideoFrame(final Bitmap frame) {
@@ -676,6 +706,19 @@ public class MainActivity extends EspActivity {
             }
         });
         mVideoReceiver.start();
+    }
+
+    public synchronized void setVideoConnectionExpected(boolean expected) {
+        ensureVideoReceiver();
+        mVideoReceiver.setVideoExpected(expected);
+        if (!expected) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mVideoStatusView.setVisibility(View.GONE);
+                }
+            });
+        }
     }
 
     private void postLatestVideoFrame(Bitmap frame) {

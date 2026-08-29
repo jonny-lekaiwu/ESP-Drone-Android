@@ -73,7 +73,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 import javax.net.ssl.HttpsURLConnection;
 

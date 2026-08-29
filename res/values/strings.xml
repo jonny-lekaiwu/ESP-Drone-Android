@@ -2,7 +2,7 @@
 <resources>
 
     <string name="app_name">TinyDrone</string>
-    <string name="title_activity_main">ESP-Drone</string>
+    <string name="title_activity_main">TinyDrone</string>
 
     <!-- Header -->
     <string name="battery_text">%1$.1fV</string>
@@ -20,7 +20,7 @@
     <string name="menu_disconnect">Disconnect</string>
     <string name="menu_preferences">Preferences</string>
     <string name="menu_preferences_ContentDescription">Preferences button</string>
-    <string name="preferences_title">Crazyflie Client settings</string>
+    <string name="preferences_title">TinyDrone settings</string>
 
     <string name="button_ledring_contentDescription">LED ring button</string>
     <string name="button_headlight_contentDescription">Headlight button</string>
@@ -144,8 +144,8 @@
 
     <string name="preferences_bootloader_title">Bootloader</string>
 
-    <string name="preferences_origin_project">Origin Project</string>
-    <string name="origin_project_content">ESPDrone Android APP based on crazyflie-android-client is licensed under the GNU General Public License V2</string>
+    <string name="preferences_origin_project">Open-source licenses</string>
+    <string name="origin_project_content">TinyDrone is based on Espressif ESP-Drone Android and the Bitcraze Crazyflie Android client. This application remains licensed under the GNU General Public License v2; original copyright and license notices are retained.</string>
     
     <!-- FlightDataView -->
     <string name="pitch_label">P:</string>

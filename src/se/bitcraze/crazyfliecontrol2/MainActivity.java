@@ -79,7 +79,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.MobileAnarchy.Android.Widgets.Joystick.JoystickView;
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 public class MainActivity extends EspActivity {
 

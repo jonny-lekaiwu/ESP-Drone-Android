@@ -34,7 +34,7 @@ import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.widget.Toast;
 
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 /**
  * This class encapsulates the common preferences for all types of controllers.

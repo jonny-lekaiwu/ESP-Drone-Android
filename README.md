@@ -1,16 +1,18 @@
-# Crazyflie Android client
+# TinyDrone Android
 
-The Crazyflie Android client can be used to control the Crazyflie micro quadcopter from an Android device.
-Connection is established using either the Crazyradio USB dongle or over Bluetooth LE (Crazyflie 2.0 only).
+TinyDrone is an Android controller for the TinyDrone aircraft. It sends flight-control commands over UDP, receives the aircraft's UDP JPEG video stream, displays telemetry such as battery voltage, and supports yaw-lock and headless flight modes.
 
-The Crazyflie Android client app is available in the Google Play store:  
-https://play.google.com/store/apps/details?id=se.bitcraze.crazyfliecontrol2
+The Android application ID is `com.tinydrone.android`. GitHub Actions produces a versioned `TinyDrone-vX.Y.Z.apk` debug package for test installation.
 
-More information:
+## Open-source origins and license
 
- - [Crazyflie Android client user guide](http://wiki.bitcraze.se/doc:crazyflie:client:cfandroid:index)
- - [Crazyflie Android client development guide](http://wiki.bitcraze.se/doc:crazyflie:dev:env:android)
+TinyDrone is derived from Espressif's ESP-Drone Android application, which itself is based on the Bitcraze Crazyflie Android client. The original copyright notices and project history are retained. This project remains licensed under the GNU General Public License v2; see [LICENSE.txt](LICENSE.txt).
+
+Upstream references:
+
+ - [Espressif ESP-Drone Android](https://github.com/EspressifApps/ESP-Drone-Android)
+ - [Bitcraze Crazyflie Android client](https://github.com/bitcraze/crazyflie-android-client)
 
 ## Contributions
 
-Please check the contribution guide in [CONTRIBUTING.md](https://github.com/bitcraze/crazyflie-android-client/blob/master/CONTRIBUTING.md).
+Please check the local [CONTRIBUTING.md](CONTRIBUTING.md). Upstream contribution history remains available in the repositories linked above.

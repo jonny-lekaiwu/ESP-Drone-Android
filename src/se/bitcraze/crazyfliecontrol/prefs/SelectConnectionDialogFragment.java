@@ -33,7 +33,7 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
 
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 public class SelectConnectionDialogFragment extends DialogFragment {
 

@@ -1,15 +1,10 @@
-/*
- * Copyright (C) 2026 TinyDrone contributors
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License, version 2 or later.
- */
+/* Copyright (C) 2026 TinyDrone contributors
+ * Licensed under the GNU General Public License, version 2 or later. */
 package se.bitcraze.crazyfliecontrol2;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Log;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -17,11 +12,14 @@ import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
-/** Reassembles the packetized JPEG stream used by Tiny-Drone-Controller. */
+/** Receives the packetized JPEG stream produced by Tiny-Drone wifi_esp32.c. */
 public final class UdpVideoReceiver extends Thread {
-    public interface FrameListener {
+    public interface Listener {
         void onVideoFrame(Bitmap frame);
+        void onVideoStatus(String status);
     }
 
     private static final String TAG = "UdpVideoReceiver";
@@ -33,42 +31,69 @@ public final class UdpVideoReceiver extends Thread {
     private static final int MAX_PACKETS = (MAX_FRAME_SIZE + PAYLOAD_SIZE - 1) / PAYLOAD_SIZE;
     private static final int RECEIVE_BUFFER_SIZE = 4 * 1024 * 1024;
 
-    private final FrameListener mListener;
-    private volatile DatagramSocket mSocket;
+    private static final class FrameBuffer {
+        final byte[] data = new byte[MAX_FRAME_SIZE];
+        int length;
+    }
 
-    public UdpVideoReceiver(FrameListener listener) {
-        super("TinyDrone-video");
+    private final Listener mListener;
+    private final BlockingQueue<FrameBuffer> mFreeFrames = new ArrayBlockingQueue<>(2);
+    private final BlockingQueue<FrameBuffer> mDecodeFrames = new ArrayBlockingQueue<>(1);
+    private volatile DatagramSocket mSocket;
+    private volatile Thread mDecoderThread;
+
+    public UdpVideoReceiver(Listener listener) {
+        super("TinyDrone-video-rx");
         mListener = listener;
+        mFreeFrames.add(new FrameBuffer());
+        mFreeFrames.add(new FrameBuffer());
     }
 
     public void shutdown() {
         interrupt();
+        Thread decoder = mDecoderThread;
+        if (decoder != null) decoder.interrupt();
         DatagramSocket socket = mSocket;
         if (socket != null) socket.close();
     }
 
-    @Override
-    public void run() {
-        byte[] datagram = new byte[65507];
-        byte[] frame = null;
-        boolean[] received = null;
+    @Override public void run() {
+        startDecoder();
+        byte[] datagram = new byte[PACKET_SIZE];
+        boolean[] received = new boolean[MAX_PACKETS];
+        FrameBuffer activeFrame = null;
         long currentFrameId = -1;
-        int frameSize = 0;
-        int expectedPackets = 0;
-        int receivedPackets = 0;
+        int frameSize = 0, expectedPackets = 0, receivedPackets = 0;
+        boolean sawPacket = false;
 
         try {
             DatagramSocket socket = new DatagramSocket(null);
             mSocket = socket;
             socket.setReuseAddress(true);
-            socket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
+            try {
+                socket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
+            } catch (SocketException e) {
+                Log.w(TAG, "Large receive buffer unavailable; using system default", e);
+            }
             socket.bind(new InetSocketAddress(VIDEO_PORT));
-
+            mListener.onVideoStatus("UDP 5000 listening - tap Connect");
             DatagramPacket packet = new DatagramPacket(datagram, datagram.length);
+
             while (!isInterrupted() && !socket.isClosed()) {
                 packet.setLength(datagram.length);
                 socket.receive(packet);
-                if (packet.getLength() <= HEADER_SIZE) continue;
+                if (!sawPacket) {
+                    sawPacket = true;
+                    mListener.onVideoStatus("Receiving video packets");
+                }
+                if (packet.getLength() == HEADER_SIZE) {
+                    ByteBuffer failure = ByteBuffer.wrap(packet.getData(), 0, HEADER_SIZE)
+                            .order(ByteOrder.LITTLE_ENDIAN);
+                    if ((failure.getInt() & 0xffffffffL) == 0xffffffffL)
+                        mListener.onVideoStatus("Drone camera capture failed");
+                    continue;
+                }
+                if (packet.getLength() < HEADER_SIZE) continue;
 
                 ByteBuffer header = ByteBuffer.wrap(packet.getData(), packet.getOffset(), HEADER_SIZE)
                         .order(ByteOrder.LITTLE_ENDIAN);
@@ -79,52 +104,92 @@ public final class UdpVideoReceiver extends Thread {
                 int dataLength = header.getShort() & 0xffff;
                 int actualLength = packet.getLength() - HEADER_SIZE;
 
-                if (totalSizeLong == 0 || totalSizeLong > MAX_FRAME_SIZE ||
-                        totalPackets == 0 || totalPackets > MAX_PACKETS ||
+                if (totalSizeLong < 4 || totalSizeLong > MAX_FRAME_SIZE || totalPackets == 0 ||
+                        totalPackets > MAX_PACKETS ||
                         totalPackets != (totalSizeLong + PAYLOAD_SIZE - 1) / PAYLOAD_SIZE ||
-                        sequence >= totalPackets || dataLength == 0 ||
-                        dataLength > PAYLOAD_SIZE || dataLength != actualLength) continue;
+                        sequence >= totalPackets || dataLength == 0 || dataLength > PAYLOAD_SIZE ||
+                        dataLength != actualLength) {
+                    mListener.onVideoStatus("Invalid video packet header");
+                    continue;
+                }
 
                 if (frameId != currentFrameId) {
+                    if (activeFrame != null) {
+                        mFreeFrames.offer(activeFrame);
+                        if (receivedPackets != expectedPackets)
+                            mListener.onVideoStatus("Video packet loss - waiting for next frame");
+                    }
+                    activeFrame = mFreeFrames.poll();
                     currentFrameId = frameId;
                     frameSize = (int) totalSizeLong;
                     expectedPackets = totalPackets;
                     receivedPackets = 0;
-                    frame = new byte[frameSize];
-                    received = new boolean[expectedPackets];
+                    for (int i = 0; i < expectedPackets; i++) received[i] = false;
                 }
-                if (frameSize != (int) totalSizeLong || expectedPackets != totalPackets) continue;
+                if (activeFrame == null || frameSize != (int) totalSizeLong ||
+                        expectedPackets != totalPackets) continue;
 
                 int offset = sequence * PAYLOAD_SIZE;
+                if (offset < 0 || offset >= frameSize) continue;
                 int expectedLength = Math.min(PAYLOAD_SIZE, frameSize - offset);
-                if (offset < 0 || offset >= frameSize || dataLength != expectedLength ||
-                        offset + dataLength > frameSize || received[sequence]) continue;
-
+                if (dataLength != expectedLength || offset + dataLength > frameSize || received[sequence]) continue;
                 System.arraycopy(packet.getData(), packet.getOffset() + HEADER_SIZE,
-                        frame, offset, dataLength);
+                        activeFrame.data, offset, dataLength);
                 received[sequence] = true;
                 receivedPackets++;
 
                 if (receivedPackets == expectedPackets) {
-                    if ((frame[0] & 0xff) == 0xff && (frame[1] & 0xff) == 0xd8 &&
-                            (frame[frameSize - 2] & 0xff) == 0xff &&
-                            (frame[frameSize - 1] & 0xff) == 0xd9) {
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(frame, 0, frameSize);
-                        if (bitmap != null) mListener.onVideoFrame(bitmap);
+                    activeFrame.length = frameSize;
+                    if ((activeFrame.data[0] & 0xff) == 0xff && (activeFrame.data[1] & 0xff) == 0xd8 &&
+                            (activeFrame.data[frameSize - 2] & 0xff) == 0xff &&
+                            (activeFrame.data[frameSize - 1] & 0xff) == 0xd9) {
+                        FrameBuffer stale = mDecodeFrames.poll();
+                        if (stale != null) mFreeFrames.offer(stale);
+                        mDecodeFrames.offer(activeFrame);
+                    } else {
+                        mListener.onVideoStatus("Invalid JPEG frame");
+                        mFreeFrames.offer(activeFrame);
                     }
+                    activeFrame = null;
                     currentFrameId = -1;
-                    frame = null;
-                    received = null;
                 }
             }
         } catch (SocketException e) {
-            if (!isInterrupted()) Log.w(TAG, "Video socket stopped", e);
+            if (!isInterrupted()) {
+                Log.w(TAG, "Video socket stopped", e);
+                mListener.onVideoStatus("Cannot bind UDP 5000");
+            }
         } catch (IOException e) {
-            if (!isInterrupted()) Log.w(TAG, "Video receive failed", e);
+            if (!isInterrupted()) {
+                Log.w(TAG, "Video receive failed", e);
+                mListener.onVideoStatus("Video receive error");
+            }
         } finally {
+            if (activeFrame != null) mFreeFrames.offer(activeFrame);
             DatagramSocket socket = mSocket;
             if (socket != null) socket.close();
             mSocket = null;
         }
+    }
+
+    private void startDecoder() {
+        mDecoderThread = new Thread("TinyDrone-video-decode") {
+            @Override public void run() {
+                while (!isInterrupted()) {
+                    FrameBuffer frame = null;
+                    try {
+                        frame = mDecodeFrames.take();
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(frame.data, 0, frame.length);
+                        if (bitmap != null) mListener.onVideoFrame(bitmap);
+                        else mListener.onVideoStatus("JPEG decode failed");
+                    } catch (InterruptedException e) {
+                        interrupt();
+                    } finally {
+                        if (frame != null) mFreeFrames.offer(frame);
+                    }
+                }
+            }
+        };
+        mDecoderThread.start();
     }
 }

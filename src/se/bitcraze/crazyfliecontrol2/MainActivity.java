@@ -91,6 +91,7 @@ public class MainActivity extends EspActivity {
     private ImageButton mJoystickLeftHLock;
 
     private ImageView mVideoView;
+    private TextView mVideoStatusView;
     private UdpVideoReceiver mVideoReceiver;
     private final Object mVideoFrameLock = new Object();
     private Bitmap mPendingVideoFrame;
@@ -166,6 +167,7 @@ public class MainActivity extends EspActivity {
         mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
 
         mVideoView = (ImageView) findViewById(R.id.video_view);
+        mVideoStatusView = (TextView) findViewById(R.id.video_status);
         startVideoReceiver();
 
         //action buttons
@@ -656,10 +658,21 @@ public class MainActivity extends EspActivity {
     }
 
     private void startVideoReceiver() {
-        mVideoReceiver = new UdpVideoReceiver(new UdpVideoReceiver.FrameListener() {
+        mVideoReceiver = new UdpVideoReceiver(new UdpVideoReceiver.Listener() {
             @Override
             public void onVideoFrame(final Bitmap frame) {
                 postLatestVideoFrame(frame);
+            }
+
+            @Override
+            public void onVideoStatus(final String status) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mVideoStatusView.setText(status);
+                        mVideoStatusView.setVisibility(View.VISIBLE);
+                    }
+                });
             }
         });
         mVideoReceiver.start();
@@ -681,7 +694,10 @@ public class MainActivity extends EspActivity {
                     mPendingVideoFrame = null;
                     mVideoFramePosted = false;
                 }
-                if (latest != null) mVideoView.setImageBitmap(latest);
+                if (latest != null) {
+                    mVideoView.setImageBitmap(latest);
+                    mVideoStatusView.setVisibility(View.GONE);
+                }
             }
         });
     }

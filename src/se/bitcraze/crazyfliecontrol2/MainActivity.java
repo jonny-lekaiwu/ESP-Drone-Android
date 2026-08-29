@@ -62,6 +62,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import androidx.core.app.ActivityCompat;
@@ -101,6 +102,8 @@ public class MainActivity extends EspActivity {
     private final Object mVideoFrameLock = new Object();
     private Bitmap mPendingVideoFrame;
     private boolean mVideoFramePosted;
+    private long mVideoFpsWindowStartMs;
+    private int mVideoFpsFrameCount;
 
     private SharedPreferences mPreferences;
 
@@ -713,6 +716,7 @@ public class MainActivity extends EspActivity {
                     public void run() {
                         mVideoStatusView.setText(status);
                         mVideoStatusView.setVisibility(View.VISIBLE);
+                        resetVideoFps();
                     }
                 });
             }
@@ -728,6 +732,7 @@ public class MainActivity extends EspActivity {
                 @Override
                 public void run() {
                     mVideoStatusView.setVisibility(View.GONE);
+                    resetVideoFps();
                 }
             });
         }
@@ -752,9 +757,28 @@ public class MainActivity extends EspActivity {
                 if (latest != null) {
                     mVideoView.setImageBitmap(latest);
                     mVideoStatusView.setVisibility(View.GONE);
+                    updateVideoFps();
                 }
             }
         });
+    }
+
+    private void updateVideoFps() {
+        long now = SystemClock.elapsedRealtime();
+        if (mVideoFpsWindowStartMs == 0L) mVideoFpsWindowStartMs = now;
+        mVideoFpsFrameCount++;
+        long elapsed = now - mVideoFpsWindowStartMs;
+        if (elapsed >= 1000L) {
+            mFlightDataView.updateVideoFps(mVideoFpsFrameCount * 1000.0f / elapsed);
+            mVideoFpsWindowStartMs = now;
+            mVideoFpsFrameCount = 0;
+        }
+    }
+
+    private void resetVideoFps() {
+        mVideoFpsWindowStartMs = 0L;
+        mVideoFpsFrameCount = 0;
+        mFlightDataView.updateVideoFps(0.0f);
     }
 
     public void setLinkQualityText(final String quality){

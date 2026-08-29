@@ -50,6 +50,7 @@ public class FlightDataView extends LinearLayout {
     private TextView mTextView_roll;
     private TextView mTextView_thrust;
     private TextView mTextView_yaw;
+    private TextView mTextView_fps;
 
     public FlightDataView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -63,11 +64,13 @@ public class FlightDataView extends LinearLayout {
         mTextView_roll = (TextView) findViewById(R.id.roll);
         mTextView_thrust = (TextView) findViewById(R.id.thrust);
         mTextView_yaw = (TextView) findViewById(R.id.yaw);
+        mTextView_fps = (TextView) findViewById(R.id.video_fps);
         //initialize
         mTextView_pitch.setText(format(R.string.pitch, 0.0));
         mTextView_roll.setText(format(R.string.roll, 0.0));
         mTextView_thrust.setText(format(R.string.thrust, 0.0));
         mTextView_yaw.setText(format(R.string.yaw, 0.0));
+        updateVideoFps(0.0f);
     }
 
     public FlightDataView(Context context) {
@@ -79,6 +82,10 @@ public class FlightDataView extends LinearLayout {
         mTextView_roll.setText(format(R.string.roll, round(roll)));
         mTextView_thrust.setText(format(R.string.thrust, round(thrust)));
         mTextView_yaw.setText(format(R.string.yaw, round(yaw)));
+    }
+
+    public void updateVideoFps(float fps) {
+        mTextView_fps.setText(format(R.string.video_fps, fps));
     }
 
     private String format(int identifier, Object o){

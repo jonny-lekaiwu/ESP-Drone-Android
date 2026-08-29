@@ -156,6 +156,8 @@
     <string name="thrust">%3.0f%%</string>
     <string name="yaw_label">Y:</string>
     <string name="yaw">%3.0f</string>
+    <string name="video_fps">FPS:%1$.1f</string>
+    <string name="video_fps_initial">FPS:0.0</string>
 
     <!-- Bootloader screen -->
     <string name="title_activity_bootloader">BootloaderActivity</string>

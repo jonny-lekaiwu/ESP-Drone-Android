@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">ESP-Drone</string>
+    <string name="app_name">TinyDrone</string>
     <string name="title_activity_main">ESP-Drone</string>
 
     <!-- Header -->
-    <string name="battery_text">%1$3d%%</string>
+    <string name="battery_text">%1$.1fV</string>
+    <string name="video_content_description">TinyDrone live video</string>
     <string name="batteryIconContentDescription">Battery icon</string>
     <string name="linkQuality_text">%1$3s</string>
     <string name="linkQualityIconContentDescription">Link quality icon</string>

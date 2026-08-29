@@ -60,6 +60,7 @@ public class CrtpPacket {
     public static class Header {
 
         private int mChannel;
+        private int mReserved;
         private CrtpPort mPort;
         private boolean isNullPacketHeader = false;
 
@@ -71,10 +72,15 @@ public class CrtpPacket {
             return mPort;
         }
 
+        public int getReserved() {
+            return mReserved;
+        }
+
         public Header(byte header) {
             if(header != -1){
                 this.mPort = CrtpPort.getByNumber((byte) (header >> 4));
                 this.mChannel = header & 0x03;
+                this.mReserved = (header >> 2) & 0x03;
             }else{
                 isNullPacketHeader = true;
                 this.mPort = CrtpPort.UNKNOWN;
@@ -84,15 +90,20 @@ public class CrtpPacket {
 
         //TODO: change order of parameters according to python cflib?
         public Header(int channel, CrtpPort port){
+            this(channel, port, 0);
+        }
+
+        public Header(int channel, CrtpPort port, int reserved){
             this.mChannel = channel;
             this.mPort = port;
+            this.mReserved = reserved & 0x03;
         }
 
         public byte getByte(){
             if(isNullPacketHeader) {
                 return (byte) 0xFF;
             }
-            return (byte) (((mPort.getNumber() & 0x0F) << 4) | (mChannel & 0x03));
+            return (byte) (((mPort.getNumber() & 0x0F) << 4) | ((mReserved & 0x03) << 2) | (mChannel & 0x03));
         }
 
         public String toString() {
@@ -105,6 +116,7 @@ public class CrtpPacket {
             int result = 1;
             result = prime * result + (isNullPacketHeader ? 1231 : 1237);
             result = prime * result + mChannel;
+            result = prime * result + mReserved;
             result = prime * result + ((mPort == null) ? 0 : mPort.hashCode());
             return result;
         }
@@ -125,6 +137,9 @@ public class CrtpPacket {
                 return false;
             }
             if (mChannel != other.mChannel) {
+                return false;
+            }
+            if (mReserved != other.mReserved) {
                 return false;
             }
             if (mPort != other.mPort) {
@@ -152,6 +167,12 @@ public class CrtpPacket {
      */
     public CrtpPacket(int channel, CrtpPort port) {
         this.mPacketHeader = new Header(channel, port);
+        this.mPacketPayload = new byte[0];
+        this.mSerializedPacket = null;
+    }
+
+    public CrtpPacket(int channel, CrtpPort port, int reserved) {
+        this.mPacketHeader = new Header(channel, port, reserved);
         this.mPacketPayload = new byte[0];
         this.mSerializedPacket = null;
     }

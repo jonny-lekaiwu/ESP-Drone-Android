@@ -43,8 +43,6 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -53,6 +51,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Bitmap;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.location.LocationManager;
@@ -68,16 +67,13 @@ import android.provider.Settings;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.util.Log;
-import android.view.ContextMenu;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ImageButton;
-import android.widget.ScrollView;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -94,8 +90,11 @@ public class MainActivity extends EspActivity {
     private FlightDataView mFlightDataView;
     private ImageButton mJoystickLeftHLock;
 
-    private ScrollView mConsoleScrollView;
-    private TextView mConsoleTextView;
+    private ImageView mVideoView;
+    private UdpVideoReceiver mVideoReceiver;
+    private final Object mVideoFrameLock = new Object();
+    private Bitmap mPendingVideoFrame;
+    private boolean mVideoFramePosted;
 
     private SharedPreferences mPreferences;
 
@@ -166,9 +165,8 @@ public class MainActivity extends EspActivity {
 
         mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
 
-        mConsoleScrollView = (ScrollView) findViewById(R.id.console_scrollView);
-        mConsoleTextView = (TextView) findViewById(R.id.console_textView);
-        registerForContextMenu(mConsoleTextView);
+        mVideoView = (ImageView) findViewById(R.id.video_view);
+        startVideoReceiver();
 
         //action buttons
         mRingEffectButton = (ImageButton) findViewById(R.id.button_ledRing);
@@ -239,12 +237,7 @@ public class MainActivity extends EspActivity {
     }
 
     private void checkConsole() {
-        boolean showConsole = mPreferences.getBoolean(PreferencesActivity.KEY_PREF_SHOW_CONSOLE_BOOL, false);
-        if (showConsole) {
-            mConsoleScrollView.setVisibility(View.VISIBLE);
-        } else {
-            mConsoleScrollView.setVisibility(View.INVISIBLE);
-        }
+        // The central console has been replaced by the live video view.
     }
 
     private void initializeMenuButtons() {
@@ -434,6 +427,10 @@ public class MainActivity extends EspActivity {
         mSoundPool.release();
         mSoundPool = null;
         mPresenter.onDestroy();
+        if (mVideoReceiver != null) {
+            mVideoReceiver.shutdown();
+            mVideoReceiver = null;
+        }
         super.onDestroy();
     }
 
@@ -468,34 +465,6 @@ public class MainActivity extends EspActivity {
         }
     }
 
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        if (v.getId() == R.id.console_textView) {
-            AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
-            menu.add(Menu.NONE, 0, 0, "Copy to clipboard");
-            menu.add(Menu.NONE, 1, 1, "Clear console");
-        }
-    }
-
-    @Override
-    public boolean onContextItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case 0:
-                ClipboardManager cm = (ClipboardManager) getApplicationContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clipData = ClipData.newPlainText("console text", mConsoleTextView.getText());
-                cm.setPrimaryClip(clipData);
-                showToastie("Copied to clipboard");
-                break;
-            case 1:
-                mConsoleTextView.setText("");
-                showToastie("Console cleared");
-                break;
-            default:
-                break;
-        }
-        return true;
-    }
-
     @TargetApi(Build.VERSION_CODES.KITKAT)
     private void setHideyBar() {
         Log.i(LOG_TAG, "Activating immersive mode");
@@ -520,19 +489,7 @@ public class MainActivity extends EspActivity {
     }
 
     public void appendToConsole(String text) {
-        final String ftext = text;
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mConsoleTextView.append("\n" + ftext);
-                mConsoleScrollView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mConsoleScrollView.fullScroll(ScrollView.FOCUS_DOWN);
-                    }
-                });
-            }
-        });
+        Log.d(LOG_TAG, text);
     }
 
     @Override
@@ -689,21 +646,42 @@ public class MainActivity extends EspActivity {
     }
 
     public void setBatteryLevel(float battery) {
-        float normalizedBattery = battery - 3.0f;
-        int batteryPercentage = (int) (normalizedBattery * 100);
-        if (battery == -1f) {
-            batteryPercentage = 0;
-        } else if (normalizedBattery < 0f && normalizedBattery > -1f) {
-            batteryPercentage = 0;
-        } else if (normalizedBattery > 1f) {
-            batteryPercentage = 100;
-        }
-        //TODO: FIXME
-        final int fBatteryPercentage = batteryPercentage;
+        final float voltage = battery < 0.0f ? 0.0f : battery;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mTextView_battery.setText(format(R.string.battery_text, fBatteryPercentage));
+                mTextView_battery.setText(format(R.string.battery_text, voltage));
+            }
+        });
+    }
+
+    private void startVideoReceiver() {
+        mVideoReceiver = new UdpVideoReceiver(new UdpVideoReceiver.FrameListener() {
+            @Override
+            public void onVideoFrame(final Bitmap frame) {
+                postLatestVideoFrame(frame);
+            }
+        });
+        mVideoReceiver.start();
+    }
+
+    private void postLatestVideoFrame(Bitmap frame) {
+        synchronized (mVideoFrameLock) {
+            if (mPendingVideoFrame != null) mPendingVideoFrame.recycle();
+            mPendingVideoFrame = frame;
+            if (mVideoFramePosted) return;
+            mVideoFramePosted = true;
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Bitmap latest;
+                synchronized (mVideoFrameLock) {
+                    latest = mPendingVideoFrame;
+                    mPendingVideoFrame = null;
+                    mVideoFramePosted = false;
+                }
+                if (latest != null) mVideoView.setImageBitmap(latest);
             }
         });
     }

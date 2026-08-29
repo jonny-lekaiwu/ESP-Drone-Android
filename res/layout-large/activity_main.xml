@@ -151,25 +151,16 @@
         android:layout_centerHorizontal="true"
         android:layout_below="@+id/button_buzzerSound" />
 
-    <ScrollView
-        android:id="@+id/console_scrollView"
-        android:layout_width="180dp"
-        android:layout_height="200dp"
+    <ImageView
+        android:id="@+id/video_view"
+        android:layout_width="320dp"
+        android:layout_height="240dp"
         android:layout_centerHorizontal="true"
         android:layout_below="@+id/flightdataview"
-        android:layout_marginTop="25dp"
-        android:scrollbars="vertical"
-        android:fillViewport="true">
-
-        <TextView
-            android:id="@+id/console_textView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="10dp"
-            android:background="@drawable/stroke_bg"
-            android:padding="2dp"
-            android:gravity="top"/>
-    </ScrollView>
+        android:layout_marginTop="8dp"
+        android:background="#000000"
+        android:contentDescription="@string/video_content_description"
+        android:scaleType="fitCenter" />
 
     <com.MobileAnarchy.Android.Widgets.Joystick.JoystickView
         android:id="@+id/joystick_left"
@@ -177,8 +168,8 @@
         android:layout_height="match_parent"
         android:layout_below="@+id/flightdataview"
         android:gravity="bottom"
-        android:layout_toLeftOf="@+id/console_scrollView"
-        android:layout_toStartOf="@+id/console_scrollView"/>
+        android:layout_toLeftOf="@+id/video_view"
+        android:layout_toStartOf="@+id/video_view"/>
 
     <com.MobileAnarchy.Android.Widgets.Joystick.JoystickView
         android:id="@+id/joystick_right"
@@ -186,8 +177,8 @@
         android:layout_height="match_parent"
         android:layout_below="@+id/flightdataview"
         android:gravity="bottom"
-        android:layout_toRightOf="@+id/console_scrollView"
-        android:layout_toEndOf="@+id/console_scrollView"/>
+        android:layout_toRightOf="@+id/video_view"
+        android:layout_toEndOf="@+id/video_view"/>
 
     <ImageButton
         android:id="@+id/joystick_left_hlock"

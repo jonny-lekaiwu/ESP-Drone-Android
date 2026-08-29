@@ -11,6 +11,8 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -169,7 +171,7 @@ public class EspUdpDriver extends CrtpDriver {
         }
     }
 
-    private static class ReceiveThread extends Thread {
+    private class ReceiveThread extends Thread {
         private DatagramSocket mmSocket;
         private BlockingQueue<CrtpPacket> mmQueue;
 
@@ -199,6 +201,17 @@ public class EspUdpDriver extends CrtpDriver {
                     if (raw[udpPacket.getLength() - 1] != (byte)checksum) {
                         Log.w(TAG, "Receive Invalid packet");
                         continue;
+                    }
+                    // Controller telemetry format: port 8/channel 1, id 0,
+                    // then a little-endian IEEE-754 battery voltage.
+                    int header = data[0] & 0xff;
+                    if (((header >> 4) & 0x0f) == 8 && (header & 0x03) == 1 &&
+                            data.length >= 6 && data[1] == 0) {
+                        float voltage = ByteBuffer.wrap(data, 2, 4)
+                                .order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                        if (voltage >= 0.0f && voltage <= 10.0f && mActivity instanceof MainActivity) {
+                            ((MainActivity) mActivity).setBatteryLevel(voltage);
+                        }
                     }
                     CrtpPacket packet = new CrtpPacket(data);
                     if (mmQueue != null) {

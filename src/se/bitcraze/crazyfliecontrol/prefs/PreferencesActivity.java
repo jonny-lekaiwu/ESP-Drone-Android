@@ -763,21 +763,7 @@ public class PreferencesActivity extends PreferenceActivity {
     }
 
     public static String getDefaultJoystickSize(Context context) {
-        long screenSizeInInches = getScreenSizeInInches(context);
-        int size = 100;
-        if (screenSizeInInches >= 4) {
-            size = 80;
-        }
-        if (screenSizeInInches >= 7) {
-            size = 50;
-        }
-        if (screenSizeInInches >= 9) {
-            size = 40;
-        }
-        if (screenSizeInInches >= 10) {
-            size = 30;
-        }
-        return String.valueOf(size);
+        return "78";
     }
 
     private static long getScreenSizeInInches(Context context) {

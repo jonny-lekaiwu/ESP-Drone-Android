@@ -87,6 +87,7 @@ public class MainActivity extends EspActivity {
     private static final String LOG_TAG = "CrazyflieControl";
     private static final int MY_PERMISSIONS_REQUEST_LOCATION = 42;
     private static final String PREF_CAREFREE_MODE = "tinydrone_carefree_mode";
+    private static final String PREF_YAW_LOCKED = "tinydrone_yaw_locked";
 
     private JoystickView mJoystickViewLeft;
     private JoystickView mJoystickViewRight;
@@ -172,7 +173,7 @@ public class MainActivity extends EspActivity {
             }
         });
         mCarefreeMode = mCarefreeModeToggle.isChecked();
-        if (mCarefreeMode) setYawLocked(false);
+        setYawLocked(!mCarefreeMode && mPreferences.getBoolean(PREF_YAW_LOCKED, true));
 
         //initialize gamepad controller
         mGamepadController = new GamepadController(mControls, this, mPreferences);
@@ -678,6 +679,7 @@ public class MainActivity extends EspActivity {
 
     private void setYawLocked(boolean locked) {
         mJoystickViewLeft.setHorizontalLocked(locked);
+        mPreferences.edit().putBoolean(PREF_YAW_LOCKED, locked).apply();
         mJoystickLeftHLock.setBackgroundResource(locked ? R.drawable.custom_button :
                 R.drawable.custom_button_seledted);
     }

@@ -164,8 +164,8 @@
 
     <ImageView
         android:id="@+id/video_view"
-        android:layout_width="360dp"
-        android:layout_height="270dp"
+        android:layout_width="400dp"
+        android:layout_height="300dp"
         android:layout_centerHorizontal="true"
         android:layout_below="@+id/flightdataview"
         android:layout_marginTop="8dp"
@@ -175,8 +175,8 @@
 
     <TextView
         android:id="@+id/video_status"
-        android:layout_width="340dp"
-        android:layout_height="270dp"
+        android:layout_width="380dp"
+        android:layout_height="300dp"
         android:layout_alignLeft="@id/video_view"
         android:layout_alignRight="@id/video_view"
         android:layout_alignTop="@id/video_view"

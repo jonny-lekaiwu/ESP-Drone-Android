@@ -33,6 +33,14 @@ jobs:
           java-version: "11"
           cache: gradle
 
+      # Keep the debug signing certificate stable across ephemeral runners so
+      # versionCode upgrades can be installed over the previous debug APK.
+      - name: Restore debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: tinydrone-android-debug-keystore-v1
+
       - name: Build debug APK
         run: |
           chmod +x gradlew

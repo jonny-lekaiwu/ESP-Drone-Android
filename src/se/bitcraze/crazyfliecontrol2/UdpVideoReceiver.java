@@ -67,15 +67,8 @@ public final class UdpVideoReceiver extends Thread {
         boolean sawPacket = false;
 
         try {
-            DatagramSocket socket = new DatagramSocket(null);
-            mSocket = socket;
-            socket.setReuseAddress(true);
-            try {
-                socket.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
-            } catch (SocketException e) {
-                Log.w(TAG, "Large receive buffer unavailable; using system default", e);
-            }
-            socket.bind(new InetSocketAddress(VIDEO_PORT));
+            DatagramSocket socket = bindVideoSocket();
+            if (socket == null) return;
             mListener.onVideoStatus("UDP 5000 listening - tap Connect");
             DatagramPacket packet = new DatagramPacket(datagram, datagram.length);
 
@@ -154,11 +147,6 @@ public final class UdpVideoReceiver extends Thread {
                     currentFrameId = -1;
                 }
             }
-        } catch (SocketException e) {
-            if (!isInterrupted()) {
-                Log.w(TAG, "Video socket stopped", e);
-                mListener.onVideoStatus("Cannot bind UDP 5000");
-            }
         } catch (IOException e) {
             if (!isInterrupted()) {
                 Log.w(TAG, "Video receive failed", e);
@@ -170,6 +158,35 @@ public final class UdpVideoReceiver extends Thread {
             if (socket != null) socket.close();
             mSocket = null;
         }
+    }
+
+    /** Activity recreation can briefly leave the previous socket alive. */
+    private DatagramSocket bindVideoSocket() {
+        while (!isInterrupted()) {
+            DatagramSocket candidate = null;
+            try {
+                candidate = new DatagramSocket(null);
+                candidate.setReuseAddress(true);
+                try {
+                    candidate.setReceiveBufferSize(RECEIVE_BUFFER_SIZE);
+                } catch (SocketException e) {
+                    Log.w(TAG, "Large receive buffer unavailable; using system default", e);
+                }
+                candidate.bind(new InetSocketAddress(VIDEO_PORT));
+                mSocket = candidate;
+                return candidate;
+            } catch (SocketException e) {
+                Log.w(TAG, "UDP 5000 bind failed; retrying", e);
+                if (candidate != null) candidate.close();
+                mListener.onVideoStatus("UDP 5000 busy - retrying");
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException interrupted) {
+                    interrupt();
+                }
+            }
+        }
+        return null;
     }
 
     private void startDecoder() {

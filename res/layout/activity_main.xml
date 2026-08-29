@@ -199,12 +199,11 @@
         android:id="@+id/joystick_left_hlock"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+        android:layout_above="@id/joystick_left"
         android:layout_alignStart="@id/joystick_left"
         android:layout_alignLeft="@id/joystick_left"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
-        android:layout_marginTop="53dp"
         android:background="@drawable/custom_button_seledted"
         android:src="@drawable/ic_horizontal" />
 

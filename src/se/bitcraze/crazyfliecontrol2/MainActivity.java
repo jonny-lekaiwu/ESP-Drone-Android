@@ -74,8 +74,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -93,7 +92,7 @@ public class MainActivity extends EspActivity {
     private JoystickView mJoystickViewRight;
     private FlightDataView mFlightDataView;
     private ImageButton mJoystickLeftHLock;
-    private CheckBox mCarefreeModeToggle;
+    private Button mCarefreeModeToggle;
     private volatile boolean mCarefreeMode;
 
     private ImageView mVideoView;
@@ -156,23 +155,21 @@ public class MainActivity extends EspActivity {
             @Override
             public void onClick(View v) {
                 boolean targetState = !mJoystickViewLeft.isHorizontalLocked();
+                if (targetState) setCarefreeMode(false);
                 setYawLocked(targetState);
-                if (targetState && mCarefreeModeToggle.isChecked()) {
-                    mCarefreeModeToggle.setChecked(false);
-                }
             }
         });
-        mCarefreeModeToggle = (CheckBox) findViewById(R.id.carefree_mode_toggle);
-        mCarefreeModeToggle.setChecked(mPreferences.getBoolean(PREF_CAREFREE_MODE, false));
-        mCarefreeModeToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        mCarefreeModeToggle = (Button) findViewById(R.id.carefree_mode_toggle);
+        mCarefreeMode = mPreferences.getBoolean(PREF_CAREFREE_MODE, false);
+        mCarefreeModeToggle.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean checked) {
-                mCarefreeMode = checked;
-                mPreferences.edit().putBoolean(PREF_CAREFREE_MODE, checked).apply();
-                if (checked) setYawLocked(false);
+            public void onClick(View view) {
+                boolean targetState = !mCarefreeMode;
+                if (targetState) setYawLocked(false);
+                setCarefreeMode(targetState);
             }
         });
-        mCarefreeMode = mCarefreeModeToggle.isChecked();
+        setCarefreeMode(mCarefreeMode);
         setYawLocked(!mCarefreeMode && mPreferences.getBoolean(PREF_YAW_LOCKED, true));
 
         //initialize gamepad controller
@@ -680,8 +677,15 @@ public class MainActivity extends EspActivity {
     private void setYawLocked(boolean locked) {
         mJoystickViewLeft.setHorizontalLocked(locked);
         mPreferences.edit().putBoolean(PREF_YAW_LOCKED, locked).apply();
-        mJoystickLeftHLock.setBackgroundResource(locked ? R.drawable.custom_button :
-                R.drawable.custom_button_seledted);
+        mJoystickLeftHLock.setBackgroundResource(locked ? R.drawable.custom_button_seledted :
+                R.drawable.custom_button);
+    }
+
+    private void setCarefreeMode(boolean enabled) {
+        mCarefreeMode = enabled;
+        mPreferences.edit().putBoolean(PREF_CAREFREE_MODE, enabled).apply();
+        mCarefreeModeToggle.setBackgroundResource(enabled ? R.drawable.custom_button_seledted :
+                R.drawable.custom_button);
     }
 
     public boolean isCarefreeMode() {

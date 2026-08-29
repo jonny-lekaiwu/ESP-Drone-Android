@@ -9,6 +9,7 @@
     <string name="video_content_description">TinyDrone live video</string>
     <string name="video_waiting">Waiting for UDP video</string>
     <string name="carefree_mode">无头模式</string>
+    <string name="carefree_mode_short">无头</string>
     <string name="batteryIconContentDescription">Battery icon</string>
     <string name="linkQuality_text">%1$3s</string>
     <string name="linkQualityIconContentDescription">Link quality icon</string>

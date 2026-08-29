@@ -46,10 +46,16 @@ jobs:
           chmod +x gradlew
           ./gradlew --no-daemon --stacktrace assembleDebug
 
+      - name: Name APK from Android version
+        run: |
+          APK_VERSION=$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManifest.xml)
+          mv build/outputs/apk/debug/*.apk "build/outputs/apk/debug/ESP-Drone-Android-v${APK_VERSION}.apk"
+          echo "APK_VERSION=${APK_VERSION}" >> "$GITHUB_ENV"
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: esp-drone-android-debug-apk
+          name: ESP-Drone-Android-v${{ env.APK_VERSION }}
           path: build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14

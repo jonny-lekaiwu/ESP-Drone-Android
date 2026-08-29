@@ -75,7 +75,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -93,7 +92,7 @@ public class MainActivity extends EspActivity {
     private JoystickView mJoystickViewRight;
     private FlightDataView mFlightDataView;
     private ImageButton mJoystickLeftHLock;
-    private Button mCarefreeModeToggle;
+    private TextView mCarefreeModeToggle;
     private volatile boolean mCarefreeMode;
 
     private ImageView mVideoView;
@@ -161,7 +160,7 @@ public class MainActivity extends EspActivity {
                 applyFlightModeState(false, targetState);
             }
         });
-        mCarefreeModeToggle = (Button) findViewById(R.id.carefree_mode_toggle);
+        mCarefreeModeToggle = (TextView) findViewById(R.id.carefree_mode_toggle);
         mCarefreeMode = mPreferences.getBoolean(PREF_CAREFREE_MODE, false);
         mCarefreeModeToggle.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -684,7 +683,7 @@ public class MainActivity extends EspActivity {
     private void setCarefreeMode(boolean enabled) {
         mCarefreeMode = enabled;
         mPreferences.edit().putBoolean(PREF_CAREFREE_MODE, enabled).apply();
-        mCarefreeModeToggle.setBackgroundResource(enabled ? R.drawable.custom_button_seledted :
+        mCarefreeModeToggle.setBackgroundResource(enabled ? R.drawable.custom_button_connected :
                 R.drawable.custom_button);
     }
 

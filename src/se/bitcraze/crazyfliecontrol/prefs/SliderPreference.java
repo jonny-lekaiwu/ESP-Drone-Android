@@ -10,7 +10,7 @@ import android.view.ViewGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 import java.math.BigDecimal;
 import java.math.MathContext;

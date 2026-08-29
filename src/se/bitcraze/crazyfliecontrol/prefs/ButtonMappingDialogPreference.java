@@ -41,7 +41,7 @@ import android.view.ViewGroup.LayoutParams;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 public class ButtonMappingDialogPreference extends DialogPreference implements OnKeyListener{
 

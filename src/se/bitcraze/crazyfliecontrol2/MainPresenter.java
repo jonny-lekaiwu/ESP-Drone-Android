@@ -90,6 +90,8 @@ public class MainPresenter {
 
         @Override
         public void setupFinished() {
+            mainActivity.ensureVideoReceiver();
+            mainActivity.setVideoConnectionExpected(true);
             Param param = mCrazyflie.getParam();
             if (param != null) {
                 final Toc paramToc = param.getToc();
@@ -132,6 +134,7 @@ public class MainPresenter {
             mainActivity.showToastie("Disconnected");
             mainActivity.setConnectionButtonDisconnected();
             mainActivity.disableButtonsAndResetBatteryLevel();
+            mainActivity.setVideoConnectionExpected(false);
             stopLogConfigs(mDefaultLogConfig);
         }
 
@@ -219,7 +222,8 @@ public class MainPresenter {
                         float targetHeight = controller.getTargetHeight();
                         sendPacket(new ZDistancePacket(roll, pitch, yaw, targetHeight));
                     } else {
-                        sendPacket(new CommanderPacket(roll, pitch, yaw, (char) thrustAbsolute, xmode));
+                        sendPacket(new CommanderPacket(roll, pitch, yaw, (char) thrustAbsolute,
+                                xmode, mainActivity.isCarefreeMode()));
                     }
                     try {
                         Thread.sleep(20);

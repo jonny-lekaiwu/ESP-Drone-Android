@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">ESP-Drone</string>
-    <string name="title_activity_main">ESP-Drone</string>
+    <string name="app_name">TinyDrone</string>
+    <string name="title_activity_main">TinyDrone</string>
 
     <!-- Header -->
-    <string name="battery_text">%1$3d%%</string>
+    <string name="battery_text">%1$.1fV</string>
+    <string name="video_content_description">TinyDrone live video</string>
+    <string name="video_waiting">Waiting for UDP video</string>
+    <string name="carefree_mode">无头模式</string>
+    <string name="carefree_mode_short">无头</string>
     <string name="batteryIconContentDescription">Battery icon</string>
     <string name="linkQuality_text">%1$3s</string>
     <string name="linkQualityIconContentDescription">Link quality icon</string>
@@ -16,7 +20,7 @@
     <string name="menu_disconnect">Disconnect</string>
     <string name="menu_preferences">Preferences</string>
     <string name="menu_preferences_ContentDescription">Preferences button</string>
-    <string name="preferences_title">Crazyflie Client settings</string>
+    <string name="preferences_title">TinyDrone settings</string>
 
     <string name="button_ledring_contentDescription">LED ring button</string>
     <string name="button_headlight_contentDescription">Headlight button</string>
@@ -45,7 +49,7 @@
     <string name="preferences_mode">Mode</string>
     <string name="preferences_mode_defaultValue">2</string>
     <string name="preferences_deadzone">Deadzone</string>
-    <string name="preferences_deadzone_defaultValue">0.2</string>
+    <string name="preferences_deadzone_defaultValue">0.1</string>
     <string name="preferences_rolltrim">Roll trim</string>
     <string name="preferences_pitchtrim">Pitch trim</string>
     <string name="preferences_trim_defaultValue">0.0</string>
@@ -81,7 +85,7 @@
     <string name="preferences_touch_thrust_full_travel_summary_on">On the touch controller, use the full travel from bottom to top to control thrust</string>
     <string name="preferences_touch_thrust_full_travel_summary_off">On the touch controller, use the travel from center to top to control thrust</string>
     <string name="preferences_joystick_size_title">Virtual joystick size (%)</string>
-    <string name="preferences_joystick_size_defaultValue">100</string>
+    <string name="preferences_joystick_size_defaultValue">78</string>
     <string name="preferences_btn_title">Gamepad axis and button mapping</string>
     <string name="preferences_category_axes">Axes</string>
     <string name="preferences_right_analog_x_axis_title">Right analog X axis</string>
@@ -140,8 +144,8 @@
 
     <string name="preferences_bootloader_title">Bootloader</string>
 
-    <string name="preferences_origin_project">Origin Project</string>
-    <string name="origin_project_content">ESPDrone Android APP based on crazyflie-android-client is licensed under the GNU General Public License V2</string>
+    <string name="preferences_origin_project">Open-source licenses</string>
+    <string name="origin_project_content">TinyDrone is based on Espressif ESP-Drone Android and the Bitcraze Crazyflie Android client. This application remains licensed under the GNU General Public License v2; original copyright and license notices are retained.</string>
     
     <!-- FlightDataView -->
     <string name="pitch_label">P:</string>
@@ -152,6 +156,8 @@
     <string name="thrust">%3.0f%%</string>
     <string name="yaw_label">Y:</string>
     <string name="yaw">%3.0f</string>
+    <string name="video_fps">FPS:%1$.1f</string>
+    <string name="video_fps_initial">FPS:0.0</string>
 
     <!-- Bootloader screen -->
     <string name="title_activity_bootloader">BootloaderActivity</string>

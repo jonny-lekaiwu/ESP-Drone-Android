@@ -38,7 +38,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 public class CustomSpinnerAdapter extends ArrayAdapter<FirmwareRelease> {
 

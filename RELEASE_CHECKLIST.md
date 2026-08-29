@@ -1,4 +1,4 @@
-Crazyflie Android Client - Release Checklist
+TinyDrone Android - Release Checklist
 =====================================
 
 Connect
@@ -79,7 +79,7 @@ Attaching/Detaching Crazyradio
 * Attach Crazyradio
   * "Crazyradio attached" Toast should appear and sound played
   * "Choose an app for the USB device" should appear
-  * Select Crazyflie Client
+  * Select TinyDrone
 * Detach Crazyradio
   * "Crazyradio detached" Toast should appear and sound played
 * Detach Crazyradio while control commands are sent

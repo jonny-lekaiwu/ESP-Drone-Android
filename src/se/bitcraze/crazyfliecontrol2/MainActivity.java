@@ -43,8 +43,6 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -53,6 +51,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Bitmap;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.location.LocationManager;
@@ -63,39 +62,48 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.util.Log;
-import android.view.ContextMenu;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ImageButton;
-import android.widget.ScrollView;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.MobileAnarchy.Android.Widgets.Joystick.JoystickView;
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 public class MainActivity extends EspActivity {
 
     private static final String LOG_TAG = "CrazyflieControl";
     private static final int MY_PERMISSIONS_REQUEST_LOCATION = 42;
+    private static final String PREF_CAREFREE_MODE = "tinydrone_carefree_mode";
+    private static final String PREF_YAW_LOCKED = "tinydrone_yaw_locked";
+    private static final String PREF_FLIGHT_MODE_DEFAULTS_V2 = "tinydrone_flight_mode_defaults_v2";
 
     private JoystickView mJoystickViewLeft;
     private JoystickView mJoystickViewRight;
     private FlightDataView mFlightDataView;
     private ImageButton mJoystickLeftHLock;
+    private TextView mCarefreeModeToggle;
+    private volatile boolean mCarefreeMode;
 
-    private ScrollView mConsoleScrollView;
-    private TextView mConsoleTextView;
+    private ImageView mVideoView;
+    private TextView mVideoStatusView;
+    private UdpVideoReceiver mVideoReceiver;
+    private final Object mVideoFrameLock = new Object();
+    private Bitmap mPendingVideoFrame;
+    private boolean mVideoFramePosted;
+    private long mVideoFpsWindowStartMs;
+    private int mVideoFpsFrameCount;
 
     private SharedPreferences mPreferences;
 
@@ -150,11 +158,28 @@ public class MainActivity extends EspActivity {
             @Override
             public void onClick(View v) {
                 boolean targetState = !mJoystickViewLeft.isHorizontalLocked();
-                mJoystickViewLeft.setHorizontalLocked(targetState);
-                mJoystickLeftHLock.setBackgroundResource(targetState ? R.drawable.custom_button :
-                        R.drawable.custom_button_seledted);
+                applyFlightModeState(false, targetState);
             }
         });
+        mCarefreeModeToggle = (TextView) findViewById(R.id.carefree_mode_toggle);
+        if (!mPreferences.getBoolean(PREF_FLIGHT_MODE_DEFAULTS_V2, false)) {
+            // Establish the TinyDrone defaults once for both new installs and
+            // upgrades from versions that stored the earlier experimental state.
+            mPreferences.edit()
+                    .putBoolean(PREF_CAREFREE_MODE, false)
+                    .putBoolean(PREF_YAW_LOCKED, true)
+                    .putBoolean(PREF_FLIGHT_MODE_DEFAULTS_V2, true)
+                    .apply();
+        }
+        mCarefreeMode = mPreferences.getBoolean(PREF_CAREFREE_MODE, false);
+        mCarefreeModeToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                applyFlightModeState(!mCarefreeMode, false);
+            }
+        });
+        applyFlightModeState(mCarefreeMode,
+                !mCarefreeMode && mPreferences.getBoolean(PREF_YAW_LOCKED, true));
 
         //initialize gamepad controller
         mGamepadController = new GamepadController(mControls, this, mPreferences);
@@ -166,9 +191,9 @@ public class MainActivity extends EspActivity {
 
         mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
 
-        mConsoleScrollView = (ScrollView) findViewById(R.id.console_scrollView);
-        mConsoleTextView = (TextView) findViewById(R.id.console_textView);
-        registerForContextMenu(mConsoleTextView);
+        mVideoView = (ImageView) findViewById(R.id.video_view);
+        mVideoStatusView = (TextView) findViewById(R.id.video_status);
+        ensureVideoReceiver();
 
         //action buttons
         mRingEffectButton = (ImageButton) findViewById(R.id.button_ledRing);
@@ -239,12 +264,7 @@ public class MainActivity extends EspActivity {
     }
 
     private void checkConsole() {
-        boolean showConsole = mPreferences.getBoolean(PreferencesActivity.KEY_PREF_SHOW_CONSOLE_BOOL, false);
-        if (showConsole) {
-            mConsoleScrollView.setVisibility(View.VISIBLE);
-        } else {
-            mConsoleScrollView.setVisibility(View.INVISIBLE);
-        }
+        // The central console has been replaced by the live video view.
     }
 
     private void initializeMenuButtons() {
@@ -395,6 +415,7 @@ public class MainActivity extends EspActivity {
         mJoystickViewRight.setPreferences(mPreferences);
         mControls.setControlConfig();
         mGamepadController.setControlConfig();
+        if (mCarefreeMode) setYawLocked(false);
         resetInputMethod();
         checkScreenLock();
         checkConsole();
@@ -434,6 +455,10 @@ public class MainActivity extends EspActivity {
         mSoundPool.release();
         mSoundPool = null;
         mPresenter.onDestroy();
+        if (mVideoReceiver != null) {
+            mVideoReceiver.shutdown();
+            mVideoReceiver = null;
+        }
         super.onDestroy();
     }
 
@@ -468,34 +493,6 @@ public class MainActivity extends EspActivity {
         }
     }
 
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        if (v.getId() == R.id.console_textView) {
-            AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) menuInfo;
-            menu.add(Menu.NONE, 0, 0, "Copy to clipboard");
-            menu.add(Menu.NONE, 1, 1, "Clear console");
-        }
-    }
-
-    @Override
-    public boolean onContextItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case 0:
-                ClipboardManager cm = (ClipboardManager) getApplicationContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clipData = ClipData.newPlainText("console text", mConsoleTextView.getText());
-                cm.setPrimaryClip(clipData);
-                showToastie("Copied to clipboard");
-                break;
-            case 1:
-                mConsoleTextView.setText("");
-                showToastie("Console cleared");
-                break;
-            default:
-                break;
-        }
-        return true;
-    }
-
     @TargetApi(Build.VERSION_CODES.KITKAT)
     private void setHideyBar() {
         Log.i(LOG_TAG, "Activating immersive mode");
@@ -520,19 +517,7 @@ public class MainActivity extends EspActivity {
     }
 
     public void appendToConsole(String text) {
-        final String ftext = text;
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mConsoleTextView.append("\n" + ftext);
-                mConsoleScrollView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        mConsoleScrollView.fullScroll(ScrollView.FOCUS_DOWN);
-                    }
-                });
-            }
-        });
+        Log.d(LOG_TAG, text);
     }
 
     @Override
@@ -689,23 +674,124 @@ public class MainActivity extends EspActivity {
     }
 
     public void setBatteryLevel(float battery) {
-        float normalizedBattery = battery - 3.0f;
-        int batteryPercentage = (int) (normalizedBattery * 100);
-        if (battery == -1f) {
-            batteryPercentage = 0;
-        } else if (normalizedBattery < 0f && normalizedBattery > -1f) {
-            batteryPercentage = 0;
-        } else if (normalizedBattery > 1f) {
-            batteryPercentage = 100;
-        }
-        //TODO: FIXME
-        final int fBatteryPercentage = batteryPercentage;
+        final float voltage = battery < 0.0f ? 0.0f : battery;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mTextView_battery.setText(format(R.string.battery_text, fBatteryPercentage));
+                mTextView_battery.setText(format(R.string.battery_text, voltage));
             }
         });
+    }
+
+    private void setYawLocked(boolean locked) {
+        mJoystickViewLeft.setHorizontalLocked(locked);
+        mPreferences.edit().putBoolean(PREF_YAW_LOCKED, locked).apply();
+        // Preserve the original control convention: gray means yaw is locked,
+        // cyan means the yaw axis is enabled.
+        int background = locked ? R.drawable.custom_button : R.drawable.custom_button_seledted;
+        // Match the connection button's background path so MaterialComponents
+        // cannot tint or remeasure the oval around the horizontal icon.
+        mJoystickLeftHLock.setBackgroundDrawable(getResources().getDrawable(background));
+    }
+
+    private void setCarefreeMode(boolean enabled) {
+        mCarefreeMode = enabled;
+        mPreferences.edit().putBoolean(PREF_CAREFREE_MODE, enabled).apply();
+        mCarefreeModeToggle.setBackgroundResource(enabled ? R.drawable.custom_button_connected :
+                R.drawable.custom_button);
+    }
+
+    private void applyFlightModeState(boolean carefreeEnabled, boolean yawLocked) {
+        // These modes are mutually exclusive. Apply both UI states together so one
+        // click cannot leave the buttons and transmitted control mode out of sync.
+        if (carefreeEnabled) yawLocked = false;
+        if (yawLocked) carefreeEnabled = false;
+        setCarefreeMode(carefreeEnabled);
+        setYawLocked(yawLocked);
+    }
+
+    public boolean isCarefreeMode() {
+        return mCarefreeMode;
+    }
+
+    public synchronized void ensureVideoReceiver() {
+        if (mVideoReceiver != null && mVideoReceiver.isAlive()) return;
+        mVideoReceiver = new UdpVideoReceiver(new UdpVideoReceiver.Listener() {
+            @Override
+            public void onVideoFrame(final Bitmap frame) {
+                postLatestVideoFrame(frame);
+            }
+
+            @Override
+            public void onVideoStatus(final String status) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mVideoStatusView.setText(status);
+                        mVideoStatusView.setVisibility(View.VISIBLE);
+                        resetVideoFps();
+                    }
+                });
+            }
+        });
+        mVideoReceiver.start();
+    }
+
+    public synchronized void setVideoConnectionExpected(boolean expected) {
+        ensureVideoReceiver();
+        mVideoReceiver.setVideoExpected(expected);
+        if (!expected) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mVideoStatusView.setVisibility(View.GONE);
+                    resetVideoFps();
+                }
+            });
+        }
+    }
+
+    private void postLatestVideoFrame(Bitmap frame) {
+        synchronized (mVideoFrameLock) {
+            if (mPendingVideoFrame != null) mPendingVideoFrame.recycle();
+            mPendingVideoFrame = frame;
+            if (mVideoFramePosted) return;
+            mVideoFramePosted = true;
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Bitmap latest;
+                synchronized (mVideoFrameLock) {
+                    latest = mPendingVideoFrame;
+                    mPendingVideoFrame = null;
+                    mVideoFramePosted = false;
+                }
+                if (latest != null) {
+                    mVideoView.setImageBitmap(latest);
+                    mVideoStatusView.setVisibility(View.GONE);
+                    updateVideoFps();
+                }
+            }
+        });
+    }
+
+    private void updateVideoFps() {
+        long now = SystemClock.elapsedRealtime();
+        if (mVideoFpsWindowStartMs == 0L) mVideoFpsWindowStartMs = now;
+        mVideoFpsFrameCount++;
+        long elapsed = now - mVideoFpsWindowStartMs;
+        if (elapsed >= 1000L) {
+            mFlightDataView.updateVideoFps(mVideoFpsFrameCount * 1000.0f / elapsed);
+            mVideoFpsWindowStartMs = now;
+            mVideoFpsFrameCount = 0;
+        }
+    }
+
+    private void resetVideoFps() {
+        mVideoFpsWindowStartMs = 0L;
+        mVideoFpsFrameCount = 0;
+        mFlightDataView.updateVideoFps(0.0f);
     }
 
     public void setLinkQualityText(final String quality){

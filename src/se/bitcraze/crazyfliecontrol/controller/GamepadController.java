@@ -38,7 +38,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.widget.Toast;
 
-import com.espressif.espdrone.android.R;
+import com.tinydrone.android.R;
 
 /**
  * The GamepadController deals with external controllers (e.g. a PS3 or XBox game pad).

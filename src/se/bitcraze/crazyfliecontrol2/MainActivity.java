@@ -88,6 +88,8 @@ public class MainActivity extends EspActivity {
     private static final String PREF_CAREFREE_MODE = "tinydrone_carefree_mode";
     private static final String PREF_YAW_LOCKED = "tinydrone_yaw_locked";
     private static final String PREF_FLIGHT_MODE_DEFAULTS_V2 = "tinydrone_flight_mode_defaults_v2";
+    private static final float LOW_BATTERY_VOLTAGE = 3.2f;
+    private static final long LOW_BATTERY_BLINK_INTERVAL_MS = 1000L;
 
     private JoystickView mJoystickViewLeft;
     private JoystickView mJoystickViewRight;
@@ -126,9 +128,26 @@ public class MainActivity extends EspActivity {
     private ImageButton mBuzzerSoundButton;
     private File mCacheDir;
 
+    private ImageView mBatteryIcon;
     private TextView mTextView_battery;
     private TextView mTextView_linkQuality;
     private MainPresenter mPresenter;
+    private final Handler mBatteryWarningHandler = new Handler();
+    private boolean mLowBatteryWarningActive;
+    private boolean mBatteryWarningRed;
+    private final Runnable mBatteryWarningRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!mLowBatteryWarningActive || mBatteryIcon == null) return;
+            mBatteryWarningRed = !mBatteryWarningRed;
+            if (mBatteryWarningRed) {
+                mBatteryIcon.setColorFilter(Color.RED);
+            } else {
+                mBatteryIcon.clearColorFilter();
+            }
+            mBatteryWarningHandler.postDelayed(this, LOW_BATTERY_BLINK_INTERVAL_MS);
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -139,6 +158,7 @@ public class MainActivity extends EspActivity {
 
         setDefaultPreferenceValues();
 
+        mBatteryIcon = (ImageView) findViewById(R.id.battery_icon);
         mTextView_battery = (TextView) findViewById(R.id.battery_text);
         mTextView_linkQuality = (TextView) findViewById(R.id.linkQuality_text);
 
@@ -451,6 +471,7 @@ public class MainActivity extends EspActivity {
     @Override
     protected void onDestroy() {
         Log.d(LOG_TAG, "onDestroy()");
+        stopLowBatteryWarning();
         unregisterReceiver(mUsbReceiver);
         mSoundPool.release();
         mSoundPool = null;
@@ -675,12 +696,32 @@ public class MainActivity extends EspActivity {
 
     public void setBatteryLevel(float battery) {
         final float voltage = battery < 0.0f ? 0.0f : battery;
+        final boolean lowBattery = battery >= 0.0f && voltage < LOW_BATTERY_VOLTAGE;
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 mTextView_battery.setText(format(R.string.battery_text, voltage));
+                setLowBatteryWarning(lowBattery);
             }
         });
+    }
+
+    private void setLowBatteryWarning(boolean enabled) {
+        if (enabled == mLowBatteryWarningActive) return;
+        if (!enabled) {
+            stopLowBatteryWarning();
+            return;
+        }
+        mLowBatteryWarningActive = true;
+        mBatteryWarningRed = false;
+        mBatteryWarningHandler.post(mBatteryWarningRunnable);
+    }
+
+    private void stopLowBatteryWarning() {
+        mLowBatteryWarningActive = false;
+        mBatteryWarningRed = false;
+        mBatteryWarningHandler.removeCallbacks(mBatteryWarningRunnable);
+        if (mBatteryIcon != null) mBatteryIcon.clearColorFilter();
     }
 
     private void setYawLocked(boolean locked) {

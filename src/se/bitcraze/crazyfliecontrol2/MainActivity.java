@@ -676,8 +676,10 @@ public class MainActivity extends EspActivity {
     private void setYawLocked(boolean locked) {
         mJoystickViewLeft.setHorizontalLocked(locked);
         mPreferences.edit().putBoolean(PREF_YAW_LOCKED, locked).apply();
-        mJoystickLeftHLock.setBackgroundResource(locked ? R.drawable.custom_button_seledted :
-                R.drawable.custom_button);
+        // Preserve the original control convention: gray means yaw is locked,
+        // cyan means the yaw axis is enabled.
+        mJoystickLeftHLock.setBackgroundResource(locked ? R.drawable.custom_button :
+                R.drawable.custom_button_seledted);
     }
 
     private void setCarefreeMode(boolean enabled) {

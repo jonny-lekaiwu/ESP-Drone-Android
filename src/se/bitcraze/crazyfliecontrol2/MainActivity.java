@@ -155,8 +155,7 @@ public class MainActivity extends EspActivity {
             @Override
             public void onClick(View v) {
                 boolean targetState = !mJoystickViewLeft.isHorizontalLocked();
-                if (targetState) setCarefreeMode(false);
-                setYawLocked(targetState);
+                applyFlightModeState(false, targetState);
             }
         });
         mCarefreeModeToggle = (Button) findViewById(R.id.carefree_mode_toggle);
@@ -164,13 +163,11 @@ public class MainActivity extends EspActivity {
         mCarefreeModeToggle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                boolean targetState = !mCarefreeMode;
-                if (targetState) setYawLocked(false);
-                setCarefreeMode(targetState);
+                applyFlightModeState(!mCarefreeMode, false);
             }
         });
-        setCarefreeMode(mCarefreeMode);
-        setYawLocked(!mCarefreeMode && mPreferences.getBoolean(PREF_YAW_LOCKED, true));
+        applyFlightModeState(mCarefreeMode,
+                !mCarefreeMode && mPreferences.getBoolean(PREF_YAW_LOCKED, true));
 
         //initialize gamepad controller
         mGamepadController = new GamepadController(mControls, this, mPreferences);
@@ -686,6 +683,15 @@ public class MainActivity extends EspActivity {
         mPreferences.edit().putBoolean(PREF_CAREFREE_MODE, enabled).apply();
         mCarefreeModeToggle.setBackgroundResource(enabled ? R.drawable.custom_button_seledted :
                 R.drawable.custom_button);
+    }
+
+    private void applyFlightModeState(boolean carefreeEnabled, boolean yawLocked) {
+        // These modes are mutually exclusive. Apply both UI states together so one
+        // click cannot leave the buttons and transmitted control mode out of sync.
+        if (carefreeEnabled) yawLocked = false;
+        if (yawLocked) carefreeEnabled = false;
+        setCarefreeMode(carefreeEnabled);
+        setYawLocked(yawLocked);
     }
 
     public boolean isCarefreeMode() {

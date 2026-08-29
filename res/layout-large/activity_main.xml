@@ -112,7 +112,8 @@
         android:src="@drawable/ic_led_ring"
         android:elevation="2dp"
         android:onClick="switchLedRingEffect"
-        android:contentDescription="@string/button_ledring_contentDescription"/>
+        android:contentDescription="@string/button_ledring_contentDescription"
+        android:visibility="gone"/>
 
     <ImageButton
         android:id="@+id/button_headLight"
@@ -126,7 +127,8 @@
         android:src="@drawable/ic_headlight"
         android:elevation="2dp"
         android:onClick="toggleHeadlight"
-        android:contentDescription="@string/button_headlight_contentDescription"/>
+        android:contentDescription="@string/button_headlight_contentDescription"
+        android:visibility="gone"/>
 
     <ImageButton
         android:id="@+id/button_buzzerSound"
@@ -142,7 +144,8 @@
         android:src="@drawable/ic_volume_up_black"
         android:elevation="2dp"
         android:onClick="playBuzzerSound"
-        android:contentDescription="@string/button_buzzer_contentDescription"/>
+        android:contentDescription="@string/button_buzzer_contentDescription"
+        android:visibility="gone"/>
 
     <se.bitcraze.crazyfliecontrol2.FlightDataView
         android:id="@+id/flightdataview"
@@ -150,7 +153,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="1dp"
         android:layout_centerHorizontal="true"
-        android:layout_below="@+id/button_buzzerSound" />
+        android:layout_alignParentTop="true" />
 
     <ImageView
         android:id="@+id/video_view"
@@ -196,29 +199,34 @@
 
     <ImageButton
         android:id="@+id/joystick_left_hlock"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_above="@id/joystick_left"
         android:layout_alignStart="@id/joystick_left"
         android:layout_alignLeft="@id/joystick_left"
         android:layout_marginStart="16dp"
         android:layout_marginLeft="16dp"
         android:background="@drawable/custom_button_seledted"
+        android:padding="8dp"
+        android:translationY="10dp"
         android:src="@drawable/ic_horizontal" />
 
     <Button
         android:id="@+id/carefree_mode_toggle"
-        android:layout_width="60dp"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_above="@id/joystick_left"
         android:layout_toEndOf="@id/joystick_left_hlock"
         android:layout_toRightOf="@id/joystick_left_hlock"
-        android:layout_marginStart="6dp"
-        android:layout_marginLeft="6dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginLeft="12dp"
         android:background="@drawable/custom_button"
+        android:gravity="center"
         android:minHeight="0dp"
         android:minWidth="0dp"
-        android:padding="5dp"
+        android:padding="0dp"
+        android:stateListAnimator="@null"
         android:text="@string/carefree_mode_short"
-        android:textSize="12sp" />
+        android:textSize="10sp"
+        android:translationY="10dp" />
 </RelativeLayout>

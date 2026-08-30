@@ -340,9 +340,9 @@ public class MainActivity extends EspActivity {
             Toast.makeText(this,  "Device does not support Bluetooth LE. Please use a Crazyradio to connect to the Crazyflie instead.", Toast.LENGTH_LONG).show();
             return;
         }
-        // Since Android version 6, ACCESS_COARSE_LOCATION is required for Bluetooth scanning
+        // Android 6+ requires location permission for BLE scanning and RID station data.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Log.e(LOG_TAG, "Android version >= 6 requires ACCESS_COARSE_LOCATION permissions for Bluetooth scanning.");
+            Log.i(LOG_TAG, "Requesting location permission for BLE and RID station data.");
             requestPermissions(Manifest.permission.ACCESS_FINE_LOCATION, MY_PERMISSIONS_REQUEST_LOCATION);
         } else {
             connect();
@@ -370,7 +370,7 @@ public class MainActivity extends EspActivity {
         if (!isEnabled) {
             final AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("Location Access");
-            builder.setMessage("The app needs location access for Bluetooth scanning. Please enable it in the settings menu.");
+            builder.setMessage("TinyDrone needs phone location for the RID remote-station position. Please enable location in system settings.");
             builder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
@@ -397,7 +397,7 @@ public class MainActivity extends EspActivity {
             if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permission)) {
                 // Show an explanation to the user *asynchronously* -- don't block this thread waiting for the user's response!
                 // After the user sees the explanation, try again to request the permission.
-                Log.d(LOG_TAG, "ACCESS_COARSE_LOCATION permission request has been denied.");
+                Log.d(LOG_TAG, "Location permission request was previously denied.");
                 //Toast.makeText(this,  "Android version >= 6 requires ACCESS_COARSE_LOCATION permissions for Bluetooth scanning.", Toast.LENGTH_LONG).show();
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, request);
             } else {
@@ -419,8 +419,8 @@ public class MainActivity extends EspActivity {
                     checkLocationSettings();
                 } else {
                     // permission denied, boo! Disable the functionality that depends on this permission.
-                    Log.d(LOG_TAG, "ACCESS_COARSE_LOCATION permission request has been denied.");
-                    Toast.makeText(this,  "Android version >= 6 requires ACCESS_COARSE_LOCATION permissions for Bluetooth scanning.", Toast.LENGTH_LONG).show();
+                    Log.d(LOG_TAG, "Location permission request has been denied.");
+                    Toast.makeText(this, "Location permission is required for RID remote-station position.", Toast.LENGTH_LONG).show();
                 }
             }
         }

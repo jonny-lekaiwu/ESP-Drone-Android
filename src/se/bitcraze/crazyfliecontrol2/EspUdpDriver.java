@@ -32,6 +32,7 @@ public class EspUdpDriver extends CrtpDriver {
     private volatile DatagramSocket mSocket;
     private volatile ReceiveThread mReceiveThread;
     private volatile PostThread mPostThread;
+    private final RidStationSender mRidStationSender;
 
     private final EspActivity mActivity;
     private final BlockingQueue<CrtpPacket> mInQueue;
@@ -57,6 +58,7 @@ public class EspUdpDriver extends CrtpDriver {
                         mReceiveThread.start();
                         mPostThread = new PostThread(mSocket, deviceAddress);
                         mPostThread.start();
+                        mRidStationSender.start();
                         notifyConnected();
                     } catch (IOException e) {
                         if (mSocket != null) {
@@ -75,6 +77,7 @@ public class EspUdpDriver extends CrtpDriver {
         mActivity = activity;
         mWifiManager = (WifiManager) activity.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         mInQueue = new LinkedBlockingQueue<>();
+        mRidStationSender = new RidStationSender(activity, this);
     }
 
     @Override
@@ -92,6 +95,7 @@ public class EspUdpDriver extends CrtpDriver {
     @Override
     public void disconnect() {
         mActivity.removeBroadcastObserver(mObserver);
+        mRidStationSender.stop();
         if (mSocket != null) {
             mSocket.close();
             mSocket = null;

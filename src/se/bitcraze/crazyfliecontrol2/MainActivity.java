@@ -292,7 +292,7 @@ public class MainActivity extends EspActivity {
 
             @Override
             public void onClick(View v) {
-
+                TinyDroneLog.write("CONNECT", "Connect button pressed; log=" + TinyDroneLog.getPath());
                 try {
                     if (mPresenter != null && mPresenter.getCrazyflie() != null && mPresenter.getCrazyflie().isConnected()) {
                         mPresenter.disconnect();
@@ -305,6 +305,7 @@ public class MainActivity extends EspActivity {
                         }
                     }
                 } catch (IllegalStateException e) {
+                    TinyDroneLog.write("CONNECT", "Connection rejected", e);
                     Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             }
@@ -328,6 +329,7 @@ public class MainActivity extends EspActivity {
     }
 
     private void connectBlePreChecks() {
+        TinyDroneLog.write("CONNECT", "Starting connection pre-checks");
         // Check if Bluetooth LE is supported by the Android version
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
             Log.e(LOG_TAG, Build.VERSION.SDK_INT + "does not support Bluetooth LE.");
@@ -350,6 +352,7 @@ public class MainActivity extends EspActivity {
     }
 
     private void connect() {
+        TinyDroneLog.write("CONNECT", "Permission/settings checks complete; selecting UDP");
 //        connectBle();
         connectUDP();
     }
@@ -361,6 +364,7 @@ public class MainActivity extends EspActivity {
     }
 
     private void connectUDP() {
+        TinyDroneLog.write("CONNECT", "Calling MainPresenter.connectUDP");
         mPresenter.connectUDP(mCacheDir);
     }
 

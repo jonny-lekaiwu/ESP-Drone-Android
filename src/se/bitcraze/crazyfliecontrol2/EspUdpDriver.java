@@ -41,7 +41,9 @@ public class EspUdpDriver extends CrtpDriver {
     private Observer<String> mObserver = new Observer<String>(){
         @Override
         public void onChanged(String s) {
+            TinyDroneLog.write("UDP", "Network observer fired: " + s);
             int networkId = mWifiManager.getConnectionInfo().getNetworkId();
+            TinyDroneLog.write("UDP", "Wi-Fi networkId=" + networkId + ", connectMark=" + mConnectMark);
             if (networkId == -1) {
                 disconnect();
                 notifyConnectionLost("No SoftAP connection");
@@ -50,25 +52,30 @@ public class EspUdpDriver extends CrtpDriver {
                     mConnectMark = false;
                     try {
                         InetAddress deviceAddress = InetAddress.getByName(DEVICE_ADDRESS);
+                        TinyDroneLog.write("UDP", "Resolved drone address; creating socket");
                         mSocket = new DatagramSocket(null);
                         mSocket.setReuseAddress(true);
                         mSocket.bind(new InetSocketAddress(APP_PORT));
+                        TinyDroneLog.write("UDP", "Bound local UDP port " + APP_PORT);
                         mReceiveThread = new ReceiveThread(mSocket);
                         mReceiveThread.setPacketQueue(mInQueue);
                         mReceiveThread.start();
                         mPostThread = new PostThread(mSocket, deviceAddress);
                         mPostThread.start();
                         notifyConnected();
+                        TinyDroneLog.write("UDP", "Legacy control connection notified; starting RID");
                         // RID is auxiliary. Start it only after the legacy control link is
                         // established, and never let a device-specific location failure
                         // tear down the flight-control connection.
                         try {
                             mRidStationSender.start();
                         } catch (RuntimeException e) {
+                            TinyDroneLog.write("RID", "RID start failed but control remains connected", e);
                             Log.e(TAG, "RID station sender unavailable", e);
                             mRidStationSender.stop();
                         }
                     } catch (IOException e) {
+                        TinyDroneLog.write("UDP", "Socket connection failed", e);
                         if (mSocket != null) {
                             mSocket.close();
                             mSocket = null;
@@ -82,15 +89,18 @@ public class EspUdpDriver extends CrtpDriver {
     };
 
     public EspUdpDriver(EspActivity activity) {
+        TinyDroneLog.write("UDP", "EspUdpDriver constructor entered");
         mActivity = activity;
         mWifiManager = (WifiManager) activity.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         mInQueue = new LinkedBlockingQueue<>();
         mRidStationSender = new RidStationSender(activity, this);
+        TinyDroneLog.write("UDP", "EspUdpDriver constructor complete");
     }
 
     @Override
     public void connect() throws IOException {
         Log.w(TAG, "Connect()");
+        TinyDroneLog.write("UDP", "connect() entered");
         if (mSocket != null) {
             throw new IllegalStateException("Connection already started");
         }

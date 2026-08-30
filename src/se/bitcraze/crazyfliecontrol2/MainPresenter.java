@@ -256,9 +256,12 @@ public class MainPresenter {
 
     public void connectUDP(File cacheDir) {
         Log.d(LOG_TAG, "connectUDP()");
+        TinyDroneLog.write("PRESENTER", "connectUDP entered");
         disconnect();
+        TinyDroneLog.write("PRESENTER", "Previous connection disconnected");
         mDriver = null;
         mDriver = new EspUdpDriver(mainActivity);
+        TinyDroneLog.write("PRESENTER", "EspUdpDriver constructed");
         connect(cacheDir, null);
     }
 
@@ -273,6 +276,7 @@ public class MainPresenter {
 
     private void connect(File mCacheDir, ConnectionData connectionData) {
         if (mDriver != null) {
+            TinyDroneLog.write("PRESENTER", "Creating Crazyflie and starting driver connection");
             // add listener for connection status
             mDriver.addConnectionListener(crazyflieConnectionAdapter);
 

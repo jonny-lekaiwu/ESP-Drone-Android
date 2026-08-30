@@ -69,12 +69,15 @@ final class RidStationSender implements LocationListener {
     };
 
     RidStationSender(Context context, EspUdpDriver driver) {
+        TinyDroneLog.write("RID", "RidStationSender constructor entered");
         mContext = context.getApplicationContext();
         mDriver = driver;
         mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+        TinyDroneLog.write("RID", "LocationManager available=" + (mLocationManager != null));
     }
 
     void start() {
+        TinyDroneLog.write("RID", "start() requested");
         if (mRunning) return;
         mRunning = true;
         mHandler.post(mStartRunnable);

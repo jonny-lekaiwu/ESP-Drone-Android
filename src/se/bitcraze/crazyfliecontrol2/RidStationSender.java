@@ -39,13 +39,32 @@ final class RidStationSender implements LocationListener {
     private volatile Location mLatestLocation;
     private boolean mRunning;
 
+    private final Runnable mStartRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!mRunning) return;
+            try {
+                registerLocationUpdates();
+                mHandler.post(mSendRunnable);
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Unable to start RID station sender", e);
+                stop();
+            }
+        }
+    };
+
     private final Runnable mSendRunnable = new Runnable() {
         @Override
         public void run() {
             if (!mRunning) return;
-            CrtpPacket.Header header = new CrtpPacket.Header(2, CrtpPort.PLATFORM);
-            mDriver.sendPacket(new CrtpPacket(header.getByte(), buildPayload()));
-            mHandler.postDelayed(this, SEND_INTERVAL_MS);
+            try {
+                CrtpPacket.Header header = new CrtpPacket.Header(2, CrtpPort.PLATFORM);
+                mDriver.sendPacket(new CrtpPacket(header.getByte(), buildPayload()));
+                mHandler.postDelayed(this, SEND_INTERVAL_MS);
+            } catch (RuntimeException e) {
+                Log.e(TAG, "Disabling RID station sender after runtime failure", e);
+                stop();
+            }
         }
     };
 
@@ -58,17 +77,17 @@ final class RidStationSender implements LocationListener {
     void start() {
         if (mRunning) return;
         mRunning = true;
-        registerLocationUpdates();
-        mHandler.post(mSendRunnable);
+        mHandler.post(mStartRunnable);
     }
 
     void stop() {
         mRunning = false;
+        mHandler.removeCallbacks(mStartRunnable);
         mHandler.removeCallbacks(mSendRunnable);
         if (mLocationManager != null) {
             try {
                 mLocationManager.removeUpdates(this);
-            } catch (SecurityException e) {
+            } catch (RuntimeException e) {
                 Log.w(TAG, "Unable to remove location updates", e);
             }
         }
@@ -94,10 +113,8 @@ final class RidStationSender implements LocationListener {
             if (isNewer(lastKnown, mLatestLocation)) mLatestLocation = lastKnown;
             mLocationManager.requestLocationUpdates(provider, SEND_INTERVAL_MS, 0.0f, this,
                     Looper.getMainLooper());
-        } catch (IllegalArgumentException e) {
-            Log.d(TAG, provider + " provider unavailable");
-        } catch (SecurityException e) {
-            Log.w(TAG, "Location permission revoked", e);
+        } catch (RuntimeException e) {
+            Log.w(TAG, provider + " location provider unavailable", e);
         }
     }
 

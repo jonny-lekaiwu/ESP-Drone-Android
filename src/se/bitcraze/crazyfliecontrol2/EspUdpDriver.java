@@ -58,8 +58,16 @@ public class EspUdpDriver extends CrtpDriver {
                         mReceiveThread.start();
                         mPostThread = new PostThread(mSocket, deviceAddress);
                         mPostThread.start();
-                        mRidStationSender.start();
                         notifyConnected();
+                        // RID is auxiliary. Start it only after the legacy control link is
+                        // established, and never let a device-specific location failure
+                        // tear down the flight-control connection.
+                        try {
+                            mRidStationSender.start();
+                        } catch (RuntimeException e) {
+                            Log.e(TAG, "RID station sender unavailable", e);
+                            mRidStationSender.stop();
+                        }
                     } catch (IOException e) {
                         if (mSocket != null) {
                             mSocket.close();

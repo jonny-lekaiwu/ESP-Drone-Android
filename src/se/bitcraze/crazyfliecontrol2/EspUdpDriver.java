@@ -186,6 +186,10 @@ public class EspUdpDriver extends CrtpDriver {
                     break;
                 } catch (InterruptedException e) {
                     break;
+                } catch (RuntimeException e) {
+                    // A malformed auxiliary packet must never terminate the
+                    // process or the legacy control connection.
+                    TinyDroneLog.write("UDP", "Discarding packet that failed to serialize", e);
                 }
             }
 

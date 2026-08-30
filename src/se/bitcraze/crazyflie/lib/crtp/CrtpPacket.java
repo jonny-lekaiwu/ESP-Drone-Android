@@ -78,9 +78,15 @@ public class CrtpPacket {
 
         public Header(byte header) {
             if(header != -1){
-                this.mPort = CrtpPort.getByNumber((byte) (header >> 4));
-                this.mChannel = header & 0x03;
-                this.mReserved = (header >> 2) & 0x03;
+                // Java bytes are signed. Headers whose port is 8..15 (for
+                // example the TinyDrone RID App-channel header 0xD2) become
+                // negative when promoted to int. A signed right shift turns
+                // 0xD2 into -3 instead of port 13, leaving mPort null and
+                // crashing when the packet is serialized again.
+                int unsignedHeader = header & 0xff;
+                this.mPort = CrtpPort.getByNumber((byte) ((unsignedHeader >> 4) & 0x0f));
+                this.mChannel = unsignedHeader & 0x03;
+                this.mReserved = (unsignedHeader >> 2) & 0x03;
             }else{
                 isNullPacketHeader = true;
                 this.mPort = CrtpPort.UNKNOWN;

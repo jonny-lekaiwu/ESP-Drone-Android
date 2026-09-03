@@ -296,6 +296,25 @@
             android:key="pref_show_console_bool"
             android:title="@string/preferences_show_console_title"
             android:summary="@string/preferences_show_console_summary" />
+
+        <CheckBoxPreference
+            android:defaultValue="false"
+            android:key="pref_camera_flip_enabled"
+            android:title="@string/preferences_camera_flip_title"
+            android:summaryOn="@string/preferences_camera_flip_summary_on"
+            android:summaryOff="@string/preferences_camera_flip_summary_off" />
+
+        <PreferenceCategory android:key="pref_camera_flip_options">
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="pref_camera_flip_horizontal"
+                android:title="@string/preferences_camera_flip_horizontal_title" />
+
+            <CheckBoxPreference
+                android:defaultValue="false"
+                android:key="pref_camera_flip_vertical"
+                android:title="@string/preferences_camera_flip_vertical_title" />
+        </PreferenceCategory>
     </PreferenceScreen>
 
     <Preference

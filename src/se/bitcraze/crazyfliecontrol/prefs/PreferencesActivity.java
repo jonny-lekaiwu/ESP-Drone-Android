@@ -51,6 +51,7 @@ import android.preference.CheckBoxPreference;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceClickListener;
 import android.preference.PreferenceActivity;
+import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 
@@ -116,6 +117,9 @@ public class PreferencesActivity extends PreferenceActivity {
     public static final String KEY_PREF_SCREEN_ROTATION_LOCK_BOOL = "pref_screen_rotation_lock_bool";
     public static final String KEY_PREF_IMMERSIVE_MODE_BOOL = "pref_immersive_mode_bool";
     public static final String KEY_PREF_SHOW_CONSOLE_BOOL = "pref_show_console_bool";
+    public static final String KEY_PREF_CAMERA_FLIP_ENABLED = "pref_camera_flip_enabled";
+    public static final String KEY_PREF_CAMERA_FLIP_HORIZONTAL = "pref_camera_flip_horizontal";
+    public static final String KEY_PREF_CAMERA_FLIP_VERTICAL = "pref_camera_flip_vertical";
 
     private static final int RADIOCHANNEL_UPPER_LIMIT = 125;
 
@@ -163,6 +167,9 @@ public class PreferencesActivity extends PreferenceActivity {
         private String[] mDatarateStrings;
 
         private boolean mNoGyroSensor = false;
+        private PreferenceScreen mAppPreferenceScreen;
+        private PreferenceCategory mCameraFlipOptions;
+        private boolean mCameraFlipOptionsAttached;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
@@ -188,6 +195,22 @@ public class PreferencesActivity extends PreferenceActivity {
             Preference bootloader = findPreference("pref_bootload");
             if (bootloader != null) {
                 getPreferenceScreen().removePreference(bootloader);
+            }
+
+            mAppPreferenceScreen = (PreferenceScreen) findPreference("pref_app_screen");
+            mCameraFlipOptions = (PreferenceCategory) findPreference("pref_camera_flip_options");
+            mCameraFlipOptionsAttached = mCameraFlipOptions != null;
+            setCameraFlipOptionsVisible(mSharedPreferences.getBoolean(KEY_PREF_CAMERA_FLIP_ENABLED, false));
+        }
+
+        private void setCameraFlipOptionsVisible(boolean visible) {
+            if (mAppPreferenceScreen == null || mCameraFlipOptions == null) return;
+            if (visible && !mCameraFlipOptionsAttached) {
+                mAppPreferenceScreen.addPreference(mCameraFlipOptions);
+                mCameraFlipOptionsAttached = true;
+            } else if (!visible && mCameraFlipOptionsAttached) {
+                mAppPreferenceScreen.removePreference(mCameraFlipOptions);
+                mCameraFlipOptionsAttached = false;
             }
         }
 
@@ -376,6 +399,9 @@ public class PreferencesActivity extends PreferenceActivity {
 
         // Set summary to be the user-description for the selected value
         public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+            if (key.equals(KEY_PREF_CAMERA_FLIP_ENABLED)) {
+                setCameraFlipOptionsVisible(sharedPreferences.getBoolean(key, false));
+            }
             // Connection settings
             if (key.equals(KEY_PREF_RADIO_CHANNEL)) {
                 setSummaryInt(key, mRadioChannelDefaultValue, RADIOCHANNEL_UPPER_LIMIT, "Radio channel");

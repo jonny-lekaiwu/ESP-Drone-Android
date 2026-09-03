@@ -10,6 +10,7 @@
     <string name="video_waiting">Waiting for UDP video</string>
     <string name="carefree_mode">无头模式</string>
     <string name="carefree_mode_short">无头</string>
+    <string name="camera_flip_short">翻转</string>
     <string name="batteryIconContentDescription">Battery icon</string>
     <string name="linkQuality_text">%1$3s</string>
     <string name="linkQualityIconContentDescription">Link quality icon</string>
@@ -141,6 +142,11 @@
     <string name="preferences_immersive_mode_summary">Requires Android 4.4</string>
     <string name="preferences_show_console_title">Show console</string>
     <string name="preferences_show_console_summary">Display console messages from Crazyflie</string>
+    <string name="preferences_camera_flip_title">摄像头翻转</string>
+    <string name="preferences_camera_flip_summary_on">已启用视频画面翻转</string>
+    <string name="preferences_camera_flip_summary_off">不翻转视频画面</string>
+    <string name="preferences_camera_flip_horizontal_title">水平</string>
+    <string name="preferences_camera_flip_vertical_title">垂直</string>
 
     <string name="preferences_bootloader_title">Bootloader</string>
 

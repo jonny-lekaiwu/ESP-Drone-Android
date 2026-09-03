@@ -96,6 +96,7 @@ public class MainActivity extends EspActivity {
     private FlightDataView mFlightDataView;
     private ImageButton mJoystickLeftHLock;
     private TextView mCarefreeModeToggle;
+    private TextView mCameraFlipToggle;
     private volatile boolean mCarefreeMode;
 
     private ImageView mVideoView;
@@ -201,6 +202,19 @@ public class MainActivity extends EspActivity {
         applyFlightModeState(mCarefreeMode,
                 !mCarefreeMode && mPreferences.getBoolean(PREF_YAW_LOCKED, true));
 
+        mCameraFlipToggle = (TextView) findViewById(R.id.camera_flip_toggle);
+        mCameraFlipToggle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                boolean enabled = !mPreferences.getBoolean(
+                        PreferencesActivity.KEY_PREF_CAMERA_FLIP_ENABLED, false);
+                mPreferences.edit()
+                        .putBoolean(PreferencesActivity.KEY_PREF_CAMERA_FLIP_ENABLED, enabled)
+                        .apply();
+                applyCameraFlipState();
+            }
+        });
+
         //initialize gamepad controller
         mGamepadController = new GamepadController(mControls, this, mPreferences);
         mGamepadController.setDefaultPreferenceValues(getResources());
@@ -213,6 +227,7 @@ public class MainActivity extends EspActivity {
 
         mVideoView = (ImageView) findViewById(R.id.video_view);
         mVideoStatusView = (TextView) findViewById(R.id.video_status);
+        applyCameraFlipState();
         ensureVideoReceiver();
 
         //action buttons
@@ -443,6 +458,7 @@ public class MainActivity extends EspActivity {
         resetInputMethod();
         checkScreenLock();
         checkConsole();
+        applyCameraFlipState();
         //disable action buttons
         mRingEffectButton.setEnabled(false);
         mHeadlightButton.setEnabled(false);
@@ -757,6 +773,23 @@ public class MainActivity extends EspActivity {
 
     public boolean isCarefreeMode() {
         return mCarefreeMode;
+    }
+
+    private void applyCameraFlipState() {
+        boolean enabled = mPreferences.getBoolean(
+                PreferencesActivity.KEY_PREF_CAMERA_FLIP_ENABLED, false);
+        boolean horizontal = enabled && mPreferences.getBoolean(
+                PreferencesActivity.KEY_PREF_CAMERA_FLIP_HORIZONTAL, false);
+        boolean vertical = enabled && mPreferences.getBoolean(
+                PreferencesActivity.KEY_PREF_CAMERA_FLIP_VERTICAL, false);
+        if (mCameraFlipToggle != null) {
+            mCameraFlipToggle.setBackgroundResource(enabled ?
+                    R.drawable.custom_button_connected : R.drawable.custom_button);
+        }
+        if (mVideoView != null) {
+            mVideoView.setScaleX(horizontal ? -1.0f : 1.0f);
+            mVideoView.setScaleY(vertical ? -1.0f : 1.0f);
+        }
     }
 
     public synchronized void ensureVideoReceiver() {

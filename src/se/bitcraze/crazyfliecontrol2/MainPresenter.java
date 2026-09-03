@@ -26,6 +26,7 @@ import se.bitcraze.crazyfliecontrol.console.ConsoleListener;
 import se.bitcraze.crazyfliecontrol.controller.AbstractController;
 import se.bitcraze.crazyfliecontrol.controller.GamepadController;
 import se.bitcraze.crazyfliecontrol.controller.IController;
+import se.bitcraze.crazyfliecontrol.controller.TouchController;
 
 public class MainPresenter {
 
@@ -49,6 +50,10 @@ public class MainPresenter {
     private int mCpuFlash = 0;
     private boolean isZrangerAvailable = false;
     private boolean heightHold = false;
+    private volatile boolean mConnectionFlightModeKnown;
+    private volatile boolean mConnectionUsesAltitudeHold;
+    private volatile boolean mRidAirborneSeen;
+    private boolean mAltitudeHoldLabelVisible;
 
     private Thread mSendJoystickDataThread;
     private ConsoleListener mConsoleListener;
@@ -217,6 +222,15 @@ public class MainPresenter {
                     float pitch = controller.getPitch();
                     float yaw = controller.getYaw();
                     float thrustAbsolute = controller.getThrustAbsolute();
+                    if (mConnectionUsesAltitudeHold && controller instanceof TouchController) {
+                        TouchController touchController = (TouchController) controller;
+                        thrustAbsolute = touchController.getAltitudeHoldThrustAbsolute();
+                        boolean centered = touchController.isAltitudeHoldCentered();
+                        if (centered != mAltitudeHoldLabelVisible) {
+                            mAltitudeHoldLabelVisible = centered;
+                            mainActivity.setAltitudeHoldIndicator(centered);
+                        }
+                    }
                     boolean xmode = mainActivity.getControls().isXmode();
                     if (heightHold) {
                         float targetHeight = controller.getTargetHeight();
@@ -258,6 +272,7 @@ public class MainPresenter {
         Log.d(LOG_TAG, "connectUDP()");
         TinyDroneLog.write("PRESENTER", "connectUDP entered");
         disconnect();
+        resetFlightTelemetryState();
         TinyDroneLog.write("PRESENTER", "Previous connection disconnected");
         mDriver = null;
         mDriver = new EspUdpDriver(mainActivity);
@@ -300,6 +315,7 @@ public class MainPresenter {
 
     public void disconnect() {
         Log.d(LOG_TAG, "disconnect()");
+        resetFlightTelemetryState();
         // kill sendJoystickDataThread first to avoid NPE
         if (mSendJoystickDataThread != null) {
             mSendJoystickDataThread.interrupt();
@@ -318,6 +334,36 @@ public class MainPresenter {
 
         // link quality is not available when there is no active connection
         mainActivity.setLinkQualityText("N/A");
+    }
+
+    public void onFlightTelemetry(int flightMode, int ridOperationState) {
+        if (!mConnectionFlightModeKnown) {
+            mConnectionFlightModeKnown = true;
+            mConnectionUsesAltitudeHold = flightMode == 0x01 || flightMode == 0x02;
+            mainActivity.configureAltitudeHoldControl(mConnectionUsesAltitudeHold);
+        }
+        if (!mConnectionUsesAltitudeHold) return;
+        if (ridOperationState == 0x02) {
+            mRidAirborneSeen = true;
+        } else if (ridOperationState == 0x01 && mRidAirborneSeen) {
+            mRidAirborneSeen = false;
+            mainActivity.resetAltitudeHoldAfterLanding();
+            if (mAltitudeHoldLabelVisible) {
+                mAltitudeHoldLabelVisible = false;
+                mainActivity.setAltitudeHoldIndicator(false);
+            }
+        }
+    }
+
+    private void resetFlightTelemetryState() {
+        mConnectionFlightModeKnown = false;
+        mConnectionUsesAltitudeHold = false;
+        mRidAirborneSeen = false;
+        mAltitudeHoldLabelVisible = false;
+        if (mainActivity != null) {
+            mainActivity.configureAltitudeHoldControl(false);
+            mainActivity.setAltitudeHoldIndicator(false);
+        }
     }
 
     public void enableAltHoldMode(boolean hover) {

@@ -705,6 +705,41 @@ public class MainActivity extends EspActivity {
         return mControls;
     }
 
+    public void setFlightTelemetry(int flightMode, int ridOperationState) {
+        if (mPresenter != null) mPresenter.onFlightTelemetry(flightMode, ridOperationState);
+    }
+
+    public void configureAltitudeHoldControl(final boolean enabled) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mController instanceof TouchController) {
+                    ((TouchController) mController).setAltitudeHoldControl(enabled);
+                }
+            }
+        });
+    }
+
+    public void resetAltitudeHoldAfterLanding() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mController instanceof TouchController) {
+                    ((TouchController) mController).resetAltitudeHoldAfterLanding();
+                }
+            }
+        });
+    }
+
+    public void setAltitudeHoldIndicator(final boolean visible) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mFlightDataView != null) mFlightDataView.setAltitudeHoldVisible(visible);
+            }
+        });
+    }
+
     public static boolean isCrazyradioAvailable(Context context) {
         UsbManager usbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
         if (usbManager == null) {

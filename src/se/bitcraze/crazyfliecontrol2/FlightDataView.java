@@ -35,6 +35,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.view.View;
 
 import com.tinydrone.android.R;
 
@@ -51,6 +52,7 @@ public class FlightDataView extends LinearLayout {
     private TextView mTextView_thrust;
     private TextView mTextView_yaw;
     private TextView mTextView_fps;
+    private TextView mTextView_altitudeHold;
 
     public FlightDataView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -65,6 +67,7 @@ public class FlightDataView extends LinearLayout {
         mTextView_thrust = (TextView) findViewById(R.id.thrust);
         mTextView_yaw = (TextView) findViewById(R.id.yaw);
         mTextView_fps = (TextView) findViewById(R.id.video_fps);
+        mTextView_altitudeHold = (TextView) findViewById(R.id.altitude_hold_status);
         //initialize
         mTextView_pitch.setText(format(R.string.pitch, 0.0));
         mTextView_roll.setText(format(R.string.roll, 0.0));
@@ -86,6 +89,10 @@ public class FlightDataView extends LinearLayout {
 
     public void updateVideoFps(float fps) {
         mTextView_fps.setText(format(R.string.video_fps, fps));
+    }
+
+    public void setAltitudeHoldVisible(boolean visible) {
+        mTextView_altitudeHold.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     private String format(int identifier, Object o){

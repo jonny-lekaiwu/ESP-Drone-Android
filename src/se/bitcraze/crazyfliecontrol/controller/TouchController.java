@@ -42,10 +42,17 @@ import com.MobileAnarchy.Android.Widgets.Joystick.JoystickView;
  */
 public class TouchController extends AbstractController {
 
+    private static final float ALT_HOLD_UNLOCK_INPUT = 37768.0f / 65535.0f;
+    private static final int ALT_HOLD_DESCEND_MAX = 27766;
+    private static final int ALT_HOLD_CENTER = 32767;
+    private static final int ALT_HOLD_ASCEND_MIN = 37768;
+
     protected int mMovementRange = 1000;  // "resolution"
 
     protected JoystickView mJoystickViewLeft;
     protected JoystickView mJoystickViewRight;
+    private volatile boolean mAltitudeHoldControl;
+    private volatile boolean mAltitudeHoldUnlocked;
 
     public TouchController(Controls controls, MainActivity activity, JoystickView joystickviewLeft, JoystickView joystickviewRight) {
         super(controls, activity);
@@ -57,10 +64,68 @@ public class TouchController extends AbstractController {
     }
 
     private void updateAutoReturnMode() {
+        if (mAltitudeHoldControl) {
+            setThrustAutoReturnMode(mAltitudeHoldUnlocked
+                    ? JoystickView.AUTO_RETURN_CENTER : JoystickView.AUTO_RETURN_BOTTOM, true);
+            return;
+        }
         this.mJoystickViewLeft.setAutoReturnMode(isLeftAnalogFullTravelThrust() ? JoystickView.AUTO_RETURN_BOTTOM : JoystickView.AUTO_RETURN_CENTER);
         this.mJoystickViewLeft.autoReturn(true);
         this.mJoystickViewRight.setAutoReturnMode(isRightAnalogFullTravelThrust() ? JoystickView.AUTO_RETURN_BOTTOM : JoystickView.AUTO_RETURN_CENTER);
         this.mJoystickViewRight.autoReturn(true);
+    }
+
+    private void setThrustAutoReturnMode(int mode, boolean moveNow) {
+        JoystickView thrustJoystick = isThrustRightAnalog() ? mJoystickViewRight : mJoystickViewLeft;
+        thrustJoystick.setAutoReturnMode(mode);
+        if (moveNow) thrustJoystick.autoReturn(true);
+    }
+
+    public void setAltitudeHoldControl(boolean enabled) {
+        mAltitudeHoldControl = enabled;
+        mAltitudeHoldUnlocked = false;
+        updateAutoReturnMode();
+    }
+
+    public void resetAltitudeHoldAfterLanding() {
+        if (!mAltitudeHoldControl) return;
+        mAltitudeHoldUnlocked = false;
+        updateAutoReturnMode();
+    }
+
+    public float getAltitudeHoldThrustAbsolute() {
+        if (!mAltitudeHoldControl || !mAltitudeHoldUnlocked) return 0.0f;
+        float input = isThrustRightAnalog() ? mControls.getRightAnalog_Y() : mControls.getLeftAnalog_Y();
+        float deadzone = mControls.getDeadzone();
+        if (input < -deadzone) {
+            float scale = (input + 1.0f) / (1.0f - deadzone);
+            return Math.max(0.0f, Math.min(1.0f, scale)) * ALT_HOLD_DESCEND_MAX;
+        }
+        if (input > deadzone) {
+            float scale = (input - deadzone) / (1.0f - deadzone);
+            return ALT_HOLD_ASCEND_MIN
+                    + Math.max(0.0f, Math.min(1.0f, scale)) * (65535 - ALT_HOLD_ASCEND_MIN);
+        }
+        return ALT_HOLD_CENTER;
+    }
+
+    public boolean isAltitudeHoldCentered() {
+        if (!mAltitudeHoldControl || !mAltitudeHoldUnlocked) return false;
+        float input = isThrustRightAnalog() ? mControls.getRightAnalog_Y() : mControls.getLeftAnalog_Y();
+        return Math.abs(input) <= mControls.getDeadzone();
+    }
+
+    private float updateAltitudeHoldThrustInput(float tilt, boolean thrustAxis) {
+        if (!thrustAxis || !mAltitudeHoldControl) return tilt;
+        if (!mAltitudeHoldUnlocked) {
+            float fullTravelInput = (tilt + 1.0f) / 2.0f;
+            if (fullTravelInput <= ALT_HOLD_UNLOCK_INPUT) return fullTravelInput;
+            mAltitudeHoldUnlocked = true;
+            // Change where the stick returns on release without moving it out
+            // from under the pilot's finger during the takeoff gesture.
+            setThrustAutoReturnMode(JoystickView.AUTO_RETURN_CENTER, false);
+        }
+        return tilt;
     }
 
     @Override
@@ -90,7 +155,10 @@ public class TouchController extends AbstractController {
 
         @Override
         public void OnMoved(float pan, float tilt) {
-            if (isRightAnalogFullTravelThrust()) {
+            boolean thrustAxis = isThrustRightAnalog();
+            if (mAltitudeHoldControl) {
+                tilt = updateAltitudeHoldThrustInput(tilt, thrustAxis);
+            } else if (isRightAnalogFullTravelThrust()) {
                 tilt = (tilt + 1.0f) / 2.0f;
             }
             mControls.setRightAnalogY(tilt);
@@ -118,7 +186,10 @@ public class TouchController extends AbstractController {
 
         @Override
         public void OnMoved(float pan, float tilt) {
-            if (isLeftAnalogFullTravelThrust()) {
+            boolean thrustAxis = !isThrustRightAnalog();
+            if (mAltitudeHoldControl) {
+                tilt = updateAltitudeHoldThrustInput(tilt, thrustAxis);
+            } else if (isLeftAnalogFullTravelThrust()) {
                 tilt = (tilt + 1.0f) / 2.0f;
             }
             mControls.setLeftAnalogY(tilt);

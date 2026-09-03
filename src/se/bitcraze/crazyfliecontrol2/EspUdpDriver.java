@@ -238,6 +238,10 @@ public class EspUdpDriver extends CrtpDriver {
                         if (voltage >= 0.0f && voltage <= 10.0f && mActivity instanceof MainActivity) {
                             ((MainActivity) mActivity).setBatteryLevel(voltage);
                         }
+                        if (data.length >= 13 && mActivity instanceof MainActivity) {
+                            ((MainActivity) mActivity).setFlightTelemetry(
+                                    data[10] & 0xff, data[12] & 0xff);
+                        }
                     }
                     CrtpPacket packet = new CrtpPacket(data);
                     if (mmQueue != null) {

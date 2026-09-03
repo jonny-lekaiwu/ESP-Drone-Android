@@ -53,7 +53,7 @@ public class MainPresenter {
     private volatile boolean mConnectionFlightModeKnown;
     private volatile boolean mConnectionUsesAltitudeHold;
     private volatile boolean mRidAirborneSeen;
-    private boolean mAltitudeHoldLabelVisible;
+    private int mLastAltitudeHoldDisplayState = -1;
 
     private Thread mSendJoystickDataThread;
     private ConsoleListener mConsoleListener;
@@ -225,10 +225,10 @@ public class MainPresenter {
                     if (mConnectionUsesAltitudeHold && controller instanceof TouchController) {
                         TouchController touchController = (TouchController) controller;
                         thrustAbsolute = touchController.getAltitudeHoldThrustAbsolute();
-                        boolean centered = touchController.isAltitudeHoldCentered();
-                        if (centered != mAltitudeHoldLabelVisible) {
-                            mAltitudeHoldLabelVisible = centered;
-                            mainActivity.setAltitudeHoldIndicator(centered);
+                        int displayState = touchController.getAltitudeHoldDisplayState();
+                        if (displayState != mLastAltitudeHoldDisplayState) {
+                            mLastAltitudeHoldDisplayState = displayState;
+                            mainActivity.setAltitudeHoldState(displayState);
                         }
                     }
                     boolean xmode = mainActivity.getControls().isXmode();
@@ -337,6 +337,7 @@ public class MainPresenter {
     }
 
     public void onFlightTelemetry(int flightMode, int ridOperationState) {
+        mainActivity.setRidOperationState(ridOperationState);
         if (!mConnectionFlightModeKnown) {
             mConnectionFlightModeKnown = true;
             mConnectionUsesAltitudeHold = flightMode == 0x01 || flightMode == 0x02;
@@ -348,10 +349,8 @@ public class MainPresenter {
         } else if (ridOperationState == 0x01 && mRidAirborneSeen) {
             mRidAirborneSeen = false;
             mainActivity.resetAltitudeHoldAfterLanding();
-            if (mAltitudeHoldLabelVisible) {
-                mAltitudeHoldLabelVisible = false;
-                mainActivity.setAltitudeHoldIndicator(false);
-            }
+            mLastAltitudeHoldDisplayState = TouchController.ALT_HOLD_STATE_LOCKED;
+            mainActivity.setAltitudeHoldState(TouchController.ALT_HOLD_STATE_LOCKED);
         }
     }
 
@@ -359,10 +358,11 @@ public class MainPresenter {
         mConnectionFlightModeKnown = false;
         mConnectionUsesAltitudeHold = false;
         mRidAirborneSeen = false;
-        mAltitudeHoldLabelVisible = false;
+        mLastAltitudeHoldDisplayState = -1;
         if (mainActivity != null) {
             mainActivity.configureAltitudeHoldControl(false);
-            mainActivity.setAltitudeHoldIndicator(false);
+            mainActivity.setAltitudeHoldState(-1);
+            mainActivity.setRidOperationState(0x00);
         }
     }
 

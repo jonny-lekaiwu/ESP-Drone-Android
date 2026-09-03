@@ -42,6 +42,11 @@ import com.MobileAnarchy.Android.Widgets.Joystick.JoystickView;
  */
 public class TouchController extends AbstractController {
 
+    public static final int ALT_HOLD_STATE_LOCKED = 0;
+    public static final int ALT_HOLD_STATE_DESCENDING = 1;
+    public static final int ALT_HOLD_STATE_HOLDING = 2;
+    public static final int ALT_HOLD_STATE_ASCENDING = 3;
+
     private static final float ALT_HOLD_UNLOCK_INPUT = 37768.0f / 65535.0f;
     private static final int ALT_HOLD_DESCEND_MAX = 27766;
     private static final int ALT_HOLD_CENTER = 32767;
@@ -113,6 +118,14 @@ public class TouchController extends AbstractController {
         if (!mAltitudeHoldControl || !mAltitudeHoldUnlocked) return false;
         float input = isThrustRightAnalog() ? mControls.getRightAnalog_Y() : mControls.getLeftAnalog_Y();
         return Math.abs(input) <= mControls.getDeadzone();
+    }
+
+    public int getAltitudeHoldDisplayState() {
+        if (!mAltitudeHoldUnlocked) return ALT_HOLD_STATE_LOCKED;
+        float input = isThrustRightAnalog() ? mControls.getRightAnalog_Y() : mControls.getLeftAnalog_Y();
+        if (input < -mControls.getDeadzone()) return ALT_HOLD_STATE_DESCENDING;
+        if (input > mControls.getDeadzone()) return ALT_HOLD_STATE_ASCENDING;
+        return ALT_HOLD_STATE_HOLDING;
     }
 
     private float updateAltitudeHoldThrustInput(float tilt, boolean thrustAxis) {

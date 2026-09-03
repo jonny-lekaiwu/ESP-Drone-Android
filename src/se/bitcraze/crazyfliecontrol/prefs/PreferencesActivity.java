@@ -64,6 +64,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.tinydrone.android.R;
+import com.tinydrone.android.BuildConfig;
 
 public class PreferencesActivity extends PreferenceActivity {
 
@@ -182,6 +183,11 @@ public class PreferencesActivity extends PreferenceActivity {
 
             // Load the preferences from an XML resource
             addPreferencesFromResource(R.xml.preferences);
+
+            Preference versionPreference = findPreference("pref_app_version");
+            if (versionPreference != null) {
+                versionPreference.setSummary("v" + BuildConfig.VERSION_NAME);
+            }
 
             mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
             setInitialSummaries();

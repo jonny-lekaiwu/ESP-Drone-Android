@@ -164,7 +164,21 @@
     <string name="yaw">%3.0f</string>
     <string name="video_fps">FPS:%1$.1f</string>
     <string name="video_fps_initial">FPS:0.0</string>
-    <string name="altitude_hold_status">高度保持</string>
+    <string name="rid_operation_status">运行状态-%1$s</string>
+    <string name="rid_operation_status_initial">运行状态-未报告</string>
+    <string name="rid_state_not_reported">未报告</string>
+    <string name="rid_state_ground">地面</string>
+    <string name="rid_state_airborne">空中</string>
+    <string name="rid_state_emergency">紧急状态</string>
+    <string name="rid_state_failure_normal">运行识别发送功能失效（非紧急）</string>
+    <string name="rid_state_failure_emergency">运行识别发送功能失效（紧急）</string>
+    <string name="rid_state_reserved">预留</string>
+    <string name="rid_state_unknown">未知</string>
+    <string name="altitude_hold_locked">定高-锁定</string>
+    <string name="altitude_hold_descending">定高-下降</string>
+    <string name="altitude_hold_holding">定高-保持</string>
+    <string name="altitude_hold_ascending">定高-上升</string>
+    <string name="preferences_app_version_title">TinyDrone 当前版本</string>
 
     <!-- Bootloader screen -->
     <string name="title_activity_bootloader">BootloaderActivity</string>

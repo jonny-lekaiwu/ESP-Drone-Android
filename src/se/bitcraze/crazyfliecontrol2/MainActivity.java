@@ -731,11 +731,20 @@ public class MainActivity extends EspActivity {
         });
     }
 
-    public void setAltitudeHoldIndicator(final boolean visible) {
+    public void setAltitudeHoldState(final int state) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                if (mFlightDataView != null) mFlightDataView.setAltitudeHoldVisible(visible);
+                if (mFlightDataView != null) mFlightDataView.setAltitudeHoldState(state);
+            }
+        });
+    }
+
+    public void setRidOperationState(final int state) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mFlightDataView != null) mFlightDataView.setRidOperationState(state);
             }
         });
     }

@@ -38,6 +38,7 @@ import android.widget.TextView;
 import android.view.View;
 
 import com.tinydrone.android.R;
+import se.bitcraze.crazyfliecontrol.controller.TouchController;
 
 /**
  * Compound component that groups together flight data UI elements
@@ -52,6 +53,7 @@ public class FlightDataView extends LinearLayout {
     private TextView mTextView_thrust;
     private TextView mTextView_yaw;
     private TextView mTextView_fps;
+    private TextView mTextView_operationState;
     private TextView mTextView_altitudeHold;
 
     public FlightDataView(Context context, AttributeSet attrs) {
@@ -67,6 +69,7 @@ public class FlightDataView extends LinearLayout {
         mTextView_thrust = (TextView) findViewById(R.id.thrust);
         mTextView_yaw = (TextView) findViewById(R.id.yaw);
         mTextView_fps = (TextView) findViewById(R.id.video_fps);
+        mTextView_operationState = (TextView) findViewById(R.id.rid_operation_status);
         mTextView_altitudeHold = (TextView) findViewById(R.id.altitude_hold_status);
         //initialize
         mTextView_pitch.setText(format(R.string.pitch, 0.0));
@@ -74,6 +77,8 @@ public class FlightDataView extends LinearLayout {
         mTextView_thrust.setText(format(R.string.thrust, 0.0));
         mTextView_yaw.setText(format(R.string.yaw, 0.0));
         updateVideoFps(0.0f);
+        setRidOperationState(0x00);
+        setAltitudeHoldState(-1);
     }
 
     public FlightDataView(Context context) {
@@ -91,8 +96,46 @@ public class FlightDataView extends LinearLayout {
         mTextView_fps.setText(format(R.string.video_fps, fps));
     }
 
-    public void setAltitudeHoldVisible(boolean visible) {
-        mTextView_altitudeHold.setVisibility(visible ? View.VISIBLE : View.GONE);
+    public void setAltitudeHoldState(int state) {
+        int text;
+        switch (state) {
+            case TouchController.ALT_HOLD_STATE_LOCKED:
+                text = R.string.altitude_hold_locked;
+                break;
+            case TouchController.ALT_HOLD_STATE_DESCENDING:
+                text = R.string.altitude_hold_descending;
+                break;
+            case TouchController.ALT_HOLD_STATE_HOLDING:
+                text = R.string.altitude_hold_holding;
+                break;
+            case TouchController.ALT_HOLD_STATE_ASCENDING:
+                text = R.string.altitude_hold_ascending;
+                break;
+            default:
+                mTextView_altitudeHold.setVisibility(View.GONE);
+                return;
+        }
+        mTextView_altitudeHold.setText(text);
+        mTextView_altitudeHold.setVisibility(View.VISIBLE);
+    }
+
+    public void setRidOperationState(int state) {
+        String value;
+        switch (state) {
+            case 0x00: value = getResources().getString(R.string.rid_state_not_reported); break;
+            case 0x01: value = getResources().getString(R.string.rid_state_ground); break;
+            case 0x02: value = getResources().getString(R.string.rid_state_airborne); break;
+            case 0x03: value = getResources().getString(R.string.rid_state_emergency); break;
+            case 0x04: value = getResources().getString(R.string.rid_state_failure_normal); break;
+            case 0x05: value = getResources().getString(R.string.rid_state_failure_emergency); break;
+            default:
+                value = state >= 0x06 && state <= 0x0f
+                        ? getResources().getString(R.string.rid_state_reserved)
+                        : getResources().getString(R.string.rid_state_unknown);
+                break;
+        }
+        mTextView_operationState.setText(
+                getResources().getString(R.string.rid_operation_status, value));
     }
 
     private String format(int identifier, Object o){

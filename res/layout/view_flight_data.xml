@@ -91,12 +91,21 @@
         android:textAppearance="?android:attr/textAppearanceSmall" />
 
     <TextView
+        android:id="@+id/rid_operation_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginLeft="6dp"
+        android:text="@string/rid_operation_status_initial"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
         android:id="@+id/altitude_hold_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="6dp"
         android:layout_marginLeft="6dp"
-        android:text="@string/altitude_hold_status"
+        android:text="@string/altitude_hold_locked"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:visibility="gone" />
 

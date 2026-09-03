@@ -98,6 +98,18 @@ public class TouchController extends AbstractController {
         updateAutoReturnMode();
     }
 
+    public void beginButtonTakeoff() {
+        if (!mAltitudeHoldControl) return;
+        mAltitudeHoldUnlocked = true;
+        setThrustAutoReturnMode(JoystickView.AUTO_RETURN_CENTER, false);
+    }
+
+    public void finishButtonTakeoff() {
+        if (!mAltitudeHoldControl) return;
+        mAltitudeHoldUnlocked = true;
+        setThrustAutoReturnMode(JoystickView.AUTO_RETURN_CENTER, true);
+    }
+
     public float getAltitudeHoldThrustAbsolute() {
         if (!mAltitudeHoldControl || !mAltitudeHoldUnlocked) return 0.0f;
         float input = isThrustRightAnalog() ? mControls.getRightAnalog_Y() : mControls.getLeftAnalog_Y();

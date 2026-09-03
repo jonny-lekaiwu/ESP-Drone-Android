@@ -178,6 +178,10 @@
     <string name="altitude_hold_descending">定高-下降</string>
     <string name="altitude_hold_holding">定高-保持</string>
     <string name="altitude_hold_ascending">定高-上升</string>
+    <string name="altitude_action_takeoff">起飞</string>
+    <string name="altitude_action_taking_off">起飞中</string>
+    <string name="altitude_action_land">降落</string>
+    <string name="altitude_action_landing">降落中</string>
     <string name="preferences_app_version_title">TinyDrone 当前版本</string>
 
     <!-- Bootloader screen -->

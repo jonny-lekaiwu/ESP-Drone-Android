@@ -38,6 +38,7 @@ public enum CrtpPort {
     MEMORY(4),
     LOGGING(5),
     COMMANDER_GENERIC(7),
+    HIGH_LEVEL_COMMANDER(8),
     PLATFORM(13),
     DEBUGDRIVER(14),
     LINKCTRL(15),

@@ -58,6 +58,7 @@ public class TouchController extends AbstractController {
     protected JoystickView mJoystickViewRight;
     private volatile boolean mAltitudeHoldControl;
     private volatile boolean mAltitudeHoldUnlocked;
+    private volatile boolean mAltitudeLandingLocked;
 
     public TouchController(Controls controls, MainActivity activity, JoystickView joystickviewLeft, JoystickView joystickviewRight) {
         super(controls, activity);
@@ -89,17 +90,20 @@ public class TouchController extends AbstractController {
     public void setAltitudeHoldControl(boolean enabled) {
         mAltitudeHoldControl = enabled;
         mAltitudeHoldUnlocked = false;
+        mAltitudeLandingLocked = false;
         updateAutoReturnMode();
     }
 
     public void resetAltitudeHoldAfterLanding() {
         if (!mAltitudeHoldControl) return;
         mAltitudeHoldUnlocked = false;
+        mAltitudeLandingLocked = false;
         updateAutoReturnMode();
     }
 
     public void beginButtonTakeoff() {
         if (!mAltitudeHoldControl) return;
+        mAltitudeLandingLocked = false;
         mAltitudeHoldUnlocked = true;
         setThrustAutoReturnMode(JoystickView.AUTO_RETURN_CENTER, false);
     }
@@ -108,6 +112,13 @@ public class TouchController extends AbstractController {
         if (!mAltitudeHoldControl) return;
         mAltitudeHoldUnlocked = true;
         setThrustAutoReturnMode(JoystickView.AUTO_RETURN_CENTER, true);
+    }
+
+    public void beginButtonLanding() {
+        if (!mAltitudeHoldControl) return;
+        mAltitudeLandingLocked = true;
+        mAltitudeHoldUnlocked = false;
+        setThrustAutoReturnMode(JoystickView.AUTO_RETURN_BOTTOM, true);
     }
 
     public float getAltitudeHoldThrustAbsolute() {
@@ -142,6 +153,7 @@ public class TouchController extends AbstractController {
 
     private float updateAltitudeHoldThrustInput(float tilt, boolean thrustAxis) {
         if (!thrustAxis || !mAltitudeHoldControl) return tilt;
+        if (mAltitudeLandingLocked) return 0.0f;
         if (!mAltitudeHoldUnlocked) {
             float fullTravelInput = (tilt + 1.0f) / 2.0f;
             if (fullTravelInput <= ALT_HOLD_UNLOCK_INPUT) return fullTravelInput;

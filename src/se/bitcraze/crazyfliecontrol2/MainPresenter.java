@@ -233,7 +233,9 @@ public class MainPresenter {
                     if (mConnectionUsesAltitudeHold && controller instanceof TouchController) {
                         TouchController touchController = (TouchController) controller;
                         thrustAbsolute = touchController.getAltitudeHoldThrustAbsolute();
-                        if (mButtonTakeoffActive) {
+                        if (mLandingRequested) {
+                            thrustAbsolute = 0.0f;
+                        } else if (mButtonTakeoffActive) {
                             long now = android.os.SystemClock.elapsedRealtime();
                             if (now >= mButtonTakeoffDeadlineMs || mLatestRidOperationState == 0x02) {
                                 mButtonTakeoffActive = false;
@@ -384,8 +386,13 @@ public class MainPresenter {
     public void requestAltitudeFlightAction() {
         if (!mConnectionUsesAltitudeHold || mCrazyflie == null) return;
         if (mLatestRidOperationState == 0x02) {
-            sendPacket(new LandPacket());
             mLandingRequested = true;
+            mButtonTakeoffActive = false;
+            IController controller = mainActivity.getController();
+            if (controller instanceof TouchController) {
+                ((TouchController) controller).beginButtonLanding();
+            }
+            sendPacket(new LandPacket());
             mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_LANDING);
             return;
         }

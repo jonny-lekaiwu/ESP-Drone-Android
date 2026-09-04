@@ -71,6 +71,15 @@ public class FlightDataView extends LinearLayout {
         mTextView_fps = (TextView) findViewById(R.id.video_fps);
         mTextView_operationState = (TextView) findViewById(R.id.rid_operation_status);
         mTextView_altitudeHold = (TextView) findViewById(R.id.altitude_hold_status);
+        int[] compactTextIds = {
+                R.id.pitch_label, R.id.pitch, R.id.roll_label, R.id.roll,
+                R.id.thrust_label, R.id.thrust, R.id.yaw_label, R.id.yaw,
+                R.id.video_fps, R.id.rid_operation_status, R.id.altitude_hold_status
+        };
+        for (int textId : compactTextIds) {
+            TextView textView = (TextView) findViewById(textId);
+            if (textView != null) textView.setTextSize(12.0f);
+        }
         //initialize
         mTextView_pitch.setText(format(R.string.pitch, 0.0));
         mTextView_roll.setText(format(R.string.roll, 0.0));

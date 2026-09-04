@@ -114,6 +114,8 @@ public class PreferencesActivity extends PreferenceActivity {
     public static final String KEY_PREF_HOVER_BTN = "pref_hover_btn";
 
     public static final String KEY_PREF_JOYSTICK_SIZE = "pref_touch_slider_size";
+    public static final String KEY_PREF_AUTO_TAKEOFF_THRUST = "pref_auto_takeoff_thrust";
+    public static final String KEY_PREF_AUTO_TAKEOFF_DURATION = "pref_auto_takeoff_duration";
 
     public static final String KEY_PREF_SCREEN_ROTATION_LOCK_BOOL = "pref_screen_rotation_lock_bool";
     public static final String KEY_PREF_IMMERSIVE_MODE_BOOL = "pref_immersive_mode_bool";

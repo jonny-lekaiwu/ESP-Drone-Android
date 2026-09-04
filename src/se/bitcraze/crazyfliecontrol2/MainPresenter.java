@@ -32,9 +32,6 @@ import se.bitcraze.crazyfliecontrol.controller.TouchController;
 public class MainPresenter {
 
     private static final String LOG_TAG = "Crazyflie-MainPresenter";
-    private static final float BUTTON_TAKEOFF_THRUST = 38000.0f;
-    private static final long BUTTON_TAKEOFF_MAX_MS = 300L;
-
     private MainActivity mainActivity;
 
     private Crazyflie mCrazyflie;
@@ -59,6 +56,7 @@ public class MainPresenter {
     private volatile int mLatestRidOperationState;
     private volatile boolean mButtonTakeoffActive;
     private volatile long mButtonTakeoffDeadlineMs;
+    private volatile float mButtonTakeoffThrust = 38000.0f;
     private volatile boolean mTakeoffAwaitingAirborne;
     private volatile boolean mLandingRequested;
     private int mLastAltitudeHoldDisplayState = -1;
@@ -242,7 +240,7 @@ public class MainPresenter {
                                 touchController.finishButtonTakeoff();
                                 thrustAbsolute = 32767.0f;
                             } else {
-                                thrustAbsolute = BUTTON_TAKEOFF_THRUST;
+                                thrustAbsolute = mButtonTakeoffThrust;
                             }
                         }
                         int displayState = touchController.getAltitudeHoldDisplayState();
@@ -400,7 +398,9 @@ public class MainPresenter {
         IController controller = mainActivity.getController();
         if (!(controller instanceof TouchController)) return;
         ((TouchController) controller).beginButtonTakeoff();
-        mButtonTakeoffDeadlineMs = android.os.SystemClock.elapsedRealtime() + BUTTON_TAKEOFF_MAX_MS;
+        mButtonTakeoffThrust = mainActivity.getAutomaticTakeoffThrust();
+        mButtonTakeoffDeadlineMs = android.os.SystemClock.elapsedRealtime()
+                + mainActivity.getAutomaticTakeoffDurationMs();
         mTakeoffAwaitingAirborne = true;
         mButtonTakeoffActive = true;
         mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_TAKING_OFF);

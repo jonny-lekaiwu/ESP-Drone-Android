@@ -26,7 +26,7 @@ public class EspUdpDriver extends CrtpDriver {
 
     private static final int APP_PORT = 2399;
     private static final int DEVICE_PORT = 2390;
-    private static final String DEVICE_ADDRESS = "192.168.43.42";
+    private static final String DEVICE_ADDRESS = "192.168.26.28";
 
     private volatile boolean mConnectMark = false;
     private volatile DatagramSocket mSocket;

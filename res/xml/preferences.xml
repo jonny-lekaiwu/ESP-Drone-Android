@@ -271,26 +271,6 @@
             custom:lowerLimit="10"
             custom:wholeNumber="true"/>
 
-        <PreferenceCategory android:title="@string/preferences_auto_takeoff_category">
-            <se.bitcraze.crazyfliecontrol.prefs.SliderPreference
-                android:defaultValue="@string/preferences_auto_takeoff_thrust_defaultValue"
-                android:key="pref_auto_takeoff_thrust"
-                android:title="@string/preferences_auto_takeoff_thrust_title"
-                custom:lowerLimit="37800"
-                custom:upperLimit="41000"
-                custom:steps="32"
-                custom:wholeNumber="true" />
-
-            <se.bitcraze.crazyfliecontrol.prefs.SliderPreference
-                android:defaultValue="@string/preferences_auto_takeoff_duration_defaultValue"
-                android:key="pref_auto_takeoff_duration"
-                android:title="@string/preferences_auto_takeoff_duration_title"
-                custom:lowerLimit="100"
-                custom:upperLimit="1000"
-                custom:steps="18"
-                custom:wholeNumber="true" />
-        </PreferenceCategory>
-
     </PreferenceScreen>
 
     <!-- App settings -->

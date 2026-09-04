@@ -721,25 +721,6 @@ public class MainActivity extends EspActivity {
         return mControls;
     }
 
-    public float getAutomaticTakeoffThrust() {
-        return getClampedFloatPreference(PreferencesActivity.KEY_PREF_AUTO_TAKEOFF_THRUST,
-                38000.0f, 37800.0f, 41000.0f);
-    }
-
-    public long getAutomaticTakeoffDurationMs() {
-        return (long) getClampedFloatPreference(PreferencesActivity.KEY_PREF_AUTO_TAKEOFF_DURATION,
-                300.0f, 100.0f, 1000.0f);
-    }
-
-    private float getClampedFloatPreference(String key, float defaultValue, float min, float max) {
-        try {
-            float value = Float.parseFloat(mPreferences.getString(key, String.valueOf((int) defaultValue)));
-            return Math.max(min, Math.min(max, value));
-        } catch (NumberFormatException error) {
-            return defaultValue;
-        }
-    }
-
     public void setFlightTelemetry(int flightMode, int ridOperationState) {
         if (mPresenter != null) mPresenter.onFlightTelemetry(flightMode, ridOperationState);
     }

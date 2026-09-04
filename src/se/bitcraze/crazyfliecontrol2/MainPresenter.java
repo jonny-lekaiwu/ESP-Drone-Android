@@ -14,6 +14,7 @@ import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
 import se.bitcraze.crazyflie.lib.crtp.CrtpDriver;
 import se.bitcraze.crazyflie.lib.crtp.CrtpPacket;
 import se.bitcraze.crazyflie.lib.crtp.LandPacket;
+import se.bitcraze.crazyflie.lib.crtp.TakeoffPacket;
 import se.bitcraze.crazyflie.lib.crtp.ZDistancePacket;
 import se.bitcraze.crazyflie.lib.log.LogAdapter;
 import se.bitcraze.crazyflie.lib.log.LogConfig;
@@ -52,11 +53,10 @@ public class MainPresenter {
     private boolean heightHold = false;
     private volatile boolean mConnectionFlightModeKnown;
     private volatile boolean mConnectionUsesAltitudeHold;
+    private volatile boolean mConnectionSupportsAutoTakeoff;
     private volatile boolean mRidAirborneSeen;
     private volatile int mLatestRidOperationState;
     private volatile boolean mButtonTakeoffActive;
-    private volatile long mButtonTakeoffDeadlineMs;
-    private volatile float mButtonTakeoffThrust = 38000.0f;
     private volatile boolean mTakeoffAwaitingAirborne;
     private volatile boolean mLandingRequested;
     private int mLastAltitudeHoldDisplayState = -1;
@@ -233,15 +233,6 @@ public class MainPresenter {
                         thrustAbsolute = touchController.getAltitudeHoldThrustAbsolute();
                         if (mLandingRequested) {
                             thrustAbsolute = 0.0f;
-                        } else if (mButtonTakeoffActive) {
-                            long now = android.os.SystemClock.elapsedRealtime();
-                            if (now >= mButtonTakeoffDeadlineMs || mLatestRidOperationState == 0x02) {
-                                mButtonTakeoffActive = false;
-                                touchController.finishButtonTakeoff();
-                                thrustAbsolute = 32767.0f;
-                            } else {
-                                thrustAbsolute = mButtonTakeoffThrust;
-                            }
                         }
                         int displayState = touchController.getAltitudeHoldDisplayState();
                         if (displayState != mLastAltitudeHoldDisplayState) {
@@ -360,11 +351,17 @@ public class MainPresenter {
         if (!mConnectionFlightModeKnown) {
             mConnectionFlightModeKnown = true;
             mConnectionUsesAltitudeHold = flightMode == 0x01 || flightMode == 0x02;
+            mConnectionSupportsAutoTakeoff = flightMode == 0x01;
             mainActivity.configureAltitudeHoldControl(mConnectionUsesAltitudeHold);
         }
         if (!mConnectionUsesAltitudeHold) return;
+        if (!mConnectionSupportsAutoTakeoff) {
+            mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_HIDDEN);
+            return;
+        }
         if (ridOperationState == 0x02) {
             mRidAirborneSeen = true;
+            mButtonTakeoffActive = false;
             mTakeoffAwaitingAirborne = false;
             mainActivity.setAltitudeActionState(mLandingRequested
                     ? MainActivity.ALT_ACTION_LANDING : MainActivity.ALT_ACTION_LAND);
@@ -382,7 +379,7 @@ public class MainPresenter {
     }
 
     public void requestAltitudeFlightAction() {
-        if (!mConnectionUsesAltitudeHold || mCrazyflie == null) return;
+        if (!mConnectionSupportsAutoTakeoff || mCrazyflie == null) return;
         if (mLatestRidOperationState == 0x02) {
             mLandingRequested = true;
             mButtonTakeoffActive = false;
@@ -397,22 +394,24 @@ public class MainPresenter {
         if (mLatestRidOperationState != 0x01 || mButtonTakeoffActive) return;
         IController controller = mainActivity.getController();
         if (!(controller instanceof TouchController)) return;
-        ((TouchController) controller).beginButtonTakeoff();
-        mButtonTakeoffThrust = mainActivity.getAutomaticTakeoffThrust();
-        mButtonTakeoffDeadlineMs = android.os.SystemClock.elapsedRealtime()
-                + mainActivity.getAutomaticTakeoffDurationMs();
+        TouchController touchController = (TouchController) controller;
+        touchController.beginButtonTakeoff();
+        /* The firmware now owns the complete takeoff trajectory. Center the
+         * virtual throttle immediately instead of synthesizing a pulse. */
+        touchController.finishButtonTakeoff();
         mTakeoffAwaitingAirborne = true;
         mButtonTakeoffActive = true;
+        sendPacket(new TakeoffPacket(1.10f, 0.07f));
         mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_TAKING_OFF);
     }
 
     private void resetFlightTelemetryState() {
         mConnectionFlightModeKnown = false;
         mConnectionUsesAltitudeHold = false;
+        mConnectionSupportsAutoTakeoff = false;
         mRidAirborneSeen = false;
         mLatestRidOperationState = 0;
         mButtonTakeoffActive = false;
-        mButtonTakeoffDeadlineMs = 0L;
         mTakeoffAwaitingAirborne = false;
         mLandingRequested = false;
         mLastAltitudeHoldDisplayState = -1;

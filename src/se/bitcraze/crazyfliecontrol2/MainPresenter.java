@@ -32,8 +32,8 @@ import se.bitcraze.crazyfliecontrol.controller.TouchController;
 public class MainPresenter {
 
     private static final String LOG_TAG = "Crazyflie-MainPresenter";
-    private static final float BUTTON_TAKEOFF_THRUST = 40000.0f;
-    private static final long BUTTON_TAKEOFF_MAX_MS = 500L;
+    private static final float BUTTON_TAKEOFF_THRUST = 38000.0f;
+    private static final long BUTTON_TAKEOFF_MAX_MS = 300L;
 
     private MainActivity mainActivity;
 

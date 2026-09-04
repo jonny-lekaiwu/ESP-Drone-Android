@@ -38,7 +38,10 @@ public final class UdpVideoReceiver extends Thread {
     }
 
     private final Listener mListener;
-    private final BlockingQueue<FrameBuffer> mFreeFrames = new ArrayBlockingQueue<>(2);
+    private static final int FRAME_BUFFER_COUNT = 4;
+
+    private final BlockingQueue<FrameBuffer> mFreeFrames =
+            new ArrayBlockingQueue<>(FRAME_BUFFER_COUNT);
     private final BlockingQueue<FrameBuffer> mDecodeFrames = new ArrayBlockingQueue<>(1);
     private volatile DatagramSocket mSocket;
     private volatile Thread mDecoderThread;
@@ -48,8 +51,9 @@ public final class UdpVideoReceiver extends Thread {
     public UdpVideoReceiver(Listener listener) {
         super("TinyDrone-video-rx");
         mListener = listener;
-        mFreeFrames.add(new FrameBuffer());
-        mFreeFrames.add(new FrameBuffer());
+        for (int i = 0; i < FRAME_BUFFER_COUNT; i++) {
+            mFreeFrames.add(new FrameBuffer());
+        }
     }
 
     public void shutdown() {
@@ -216,11 +220,15 @@ public final class UdpVideoReceiver extends Thread {
     private void startDecoder() {
         mDecoderThread = new Thread("TinyDrone-video-decode") {
             @Override public void run() {
+                BitmapFactory.Options decodeOptions = new BitmapFactory.Options();
+                decodeOptions.inPreferredConfig = Bitmap.Config.RGB_565;
+                decodeOptions.inDither = true;
                 while (!isInterrupted()) {
                     FrameBuffer frame = null;
                     try {
                         frame = mDecodeFrames.take();
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(frame.data, 0, frame.length);
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(
+                                frame.data, 0, frame.length, decodeOptions);
                         if (bitmap != null) mListener.onVideoFrame(bitmap);
                         else mListener.onVideoStatus("JPEG decode failed");
                     } catch (InterruptedException e) {

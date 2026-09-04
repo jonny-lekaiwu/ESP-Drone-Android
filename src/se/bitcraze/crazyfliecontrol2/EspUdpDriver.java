@@ -13,7 +13,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -177,7 +176,6 @@ public class EspUdpDriver extends CrtpDriver {
                         checksum += (b & 0xff);
                     }
                     buf[buf.length - 1] = (byte) checksum;
-                    Log.w(TAG, "run: PostData: " + Arrays.toString(buf));
                     DatagramPacket udpPacket = new DatagramPacket(buf, buf.length, mmDevAddress, DEVICE_PORT);
                     mmSocket.send(udpPacket);
                 } catch (IOException e) {

@@ -239,8 +239,10 @@ public class EspUdpDriver extends CrtpDriver {
                             ((MainActivity) mActivity).setBatteryLevel(voltage);
                         }
                         if (data.length >= 13 && mActivity instanceof MainActivity) {
+                            float relativeHeight = ByteBuffer.wrap(data, 6, 4)
+                                    .order(ByteOrder.LITTLE_ENDIAN).getFloat();
                             ((MainActivity) mActivity).setFlightTelemetry(
-                                    data[10] & 0xff, data[12] & 0xff);
+                                    relativeHeight, data[10] & 0xff, data[12] & 0xff);
                         }
                     }
                     CrtpPacket packet = new CrtpPacket(data);

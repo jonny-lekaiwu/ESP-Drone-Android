@@ -177,6 +177,35 @@
         android:textSize="13sp"
         android:visibility="gone" />
 
+    <LinearLayout
+        android:id="@+id/flight_status_row"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/video_view"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/rid_operation_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/rid_operation_status_initial"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/altitude_hold_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginLeft="8dp"
+            android:text="@string/altitude_hold_locked"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textSize="12sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
     <com.MobileAnarchy.Android.Widgets.Joystick.JoystickView
         android:id="@+id/joystick_left"
         android:layout_width="wrap_content"

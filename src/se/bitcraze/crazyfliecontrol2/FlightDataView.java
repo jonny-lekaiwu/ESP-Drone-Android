@@ -52,6 +52,7 @@ public class FlightDataView extends LinearLayout {
     private TextView mTextView_roll;
     private TextView mTextView_thrust;
     private TextView mTextView_yaw;
+    private TextView mTextView_relativeHeight;
     private TextView mTextView_fps;
     private TextView mTextView_operationState;
     private TextView mTextView_altitudeHold;
@@ -68,13 +69,12 @@ public class FlightDataView extends LinearLayout {
         mTextView_roll = (TextView) findViewById(R.id.roll);
         mTextView_thrust = (TextView) findViewById(R.id.thrust);
         mTextView_yaw = (TextView) findViewById(R.id.yaw);
+        mTextView_relativeHeight = (TextView) findViewById(R.id.relative_height);
         mTextView_fps = (TextView) findViewById(R.id.video_fps);
-        mTextView_operationState = (TextView) findViewById(R.id.rid_operation_status);
-        mTextView_altitudeHold = (TextView) findViewById(R.id.altitude_hold_status);
         int[] compactTextIds = {
                 R.id.pitch_label, R.id.pitch, R.id.roll_label, R.id.roll,
                 R.id.thrust_label, R.id.thrust, R.id.yaw_label, R.id.yaw,
-                R.id.video_fps, R.id.rid_operation_status, R.id.altitude_hold_status
+                R.id.relative_height_label, R.id.relative_height, R.id.video_fps
         };
         for (int textId : compactTextIds) {
             TextView textView = (TextView) findViewById(textId);
@@ -85,9 +85,8 @@ public class FlightDataView extends LinearLayout {
         mTextView_roll.setText(format(R.string.roll, 0.0));
         mTextView_thrust.setText(format(R.string.thrust, 0.0));
         mTextView_yaw.setText(format(R.string.yaw, 0.0));
+        mTextView_relativeHeight.setText(R.string.relative_height_unavailable);
         updateVideoFps(0.0f);
-        setRidOperationState(0x00);
-        setAltitudeHoldState(-1);
     }
 
     public FlightDataView(Context context) {
@@ -99,6 +98,21 @@ public class FlightDataView extends LinearLayout {
         mTextView_roll.setText(format(R.string.roll, round(roll)));
         mTextView_thrust.setText(format(R.string.thrust, round(thrust)));
         mTextView_yaw.setText(format(R.string.yaw, round(yaw)));
+    }
+
+    public void updateRelativeHeight(float heightMetres) {
+        if (Float.isNaN(heightMetres) || Float.isInfinite(heightMetres)) {
+            mTextView_relativeHeight.setText(R.string.relative_height_unavailable);
+            return;
+        }
+        mTextView_relativeHeight.setText(format(R.string.relative_height, heightMetres));
+    }
+
+    public void attachStatusViews(TextView operationState, TextView altitudeHold) {
+        mTextView_operationState = operationState;
+        mTextView_altitudeHold = altitudeHold;
+        setRidOperationState(0x00);
+        setAltitudeHoldState(-1);
     }
 
     public void updateVideoFps(float fps) {

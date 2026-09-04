@@ -229,6 +229,9 @@ public class MainActivity extends EspActivity {
         initializeMenuButtons();
 
         mFlightDataView = (FlightDataView) findViewById(R.id.flightdataview);
+        mFlightDataView.attachStatusViews(
+                (TextView) findViewById(R.id.rid_operation_status),
+                (TextView) findViewById(R.id.altitude_hold_status));
 
         mVideoView = (ImageView) findViewById(R.id.video_view);
         mVideoStatusView = (TextView) findViewById(R.id.video_status);
@@ -710,8 +713,18 @@ public class MainActivity extends EspActivity {
         return mControls;
     }
 
-    public void setFlightTelemetry(int flightMode, int ridOperationState) {
+    public void setFlightTelemetry(float relativeHeight, int flightMode, int ridOperationState) {
+        setRelativeHeight(relativeHeight);
         if (mPresenter != null) mPresenter.onFlightTelemetry(flightMode, ridOperationState);
+    }
+
+    public void setRelativeHeight(final float relativeHeight) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mFlightDataView != null) mFlightDataView.updateRelativeHeight(relativeHeight);
+            }
+        });
     }
 
     public void configureAltitudeHoldControl(final boolean enabled) {

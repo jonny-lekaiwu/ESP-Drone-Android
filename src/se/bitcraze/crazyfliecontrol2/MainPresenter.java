@@ -351,6 +351,7 @@ public class MainPresenter {
             mainActivity.configureAltitudeHoldControl(false);
             mainActivity.setAltitudeHoldState(-1);
             mainActivity.setRidOperationState(0x00);
+            mainActivity.setRelativeHeight(Float.NaN);
         }
     }
 

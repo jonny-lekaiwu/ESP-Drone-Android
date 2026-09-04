@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tinydrone.android"
-    android:versionCode="44"
-    android:versionName="0.7.30" >
+    android:versionCode="45"
+    android:versionName="0.7.31" >
 
     <uses-feature
         android:name="android.hardware.usb.host"

@@ -162,6 +162,9 @@
     <string name="thrust">%3.0f%%</string>
     <string name="yaw_label">Y:</string>
     <string name="yaw">%3.0f</string>
+    <string name="relative_height_label">H:</string>
+    <string name="relative_height">%.2fm</string>
+    <string name="relative_height_unavailable">--</string>
     <string name="video_fps">FPS:%1$.1f</string>
     <string name="video_fps_initial">FPS:0.0</string>
     <string name="rid_operation_status">运行状态-%1$s</string>

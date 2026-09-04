@@ -83,12 +83,6 @@ import com.tinydrone.android.R;
 
 public class MainActivity extends EspActivity {
 
-    public static final int ALT_ACTION_HIDDEN = 0;
-    public static final int ALT_ACTION_TAKEOFF = 1;
-    public static final int ALT_ACTION_TAKING_OFF = 2;
-    public static final int ALT_ACTION_LAND = 3;
-    public static final int ALT_ACTION_LANDING = 4;
-
     private static final String LOG_TAG = "CrazyflieControl";
     private static final int MY_PERMISSIONS_REQUEST_LOCATION = 42;
     private static final String PREF_CAREFREE_MODE = "tinydrone_carefree_mode";
@@ -103,7 +97,6 @@ public class MainActivity extends EspActivity {
     private ImageButton mJoystickLeftHLock;
     private TextView mCarefreeModeToggle;
     private TextView mCameraFlipToggle;
-    private TextView mAltitudeActionToggle;
     private volatile boolean mCarefreeMode;
 
     private ImageView mVideoView;
@@ -165,6 +158,11 @@ public class MainActivity extends EspActivity {
         mPresenter = new MainPresenter(this);
 
         setDefaultPreferenceValues();
+        // Runtime-only mode flag. Never overwrite the user's persisted
+        // full-travel preference when altitude hold temporarily forces it on.
+        mPreferences.edit()
+                .putBoolean(PreferencesActivity.KEY_RUNTIME_ALTITUDE_HOLD_ACTIVE, false)
+                .apply();
 
         mBatteryIcon = (ImageView) findViewById(R.id.battery_icon);
         mTextView_battery = (TextView) findViewById(R.id.battery_text);
@@ -221,15 +219,6 @@ public class MainActivity extends EspActivity {
                 applyCameraFlipState();
             }
         });
-
-        mAltitudeActionToggle = (TextView) findViewById(R.id.altitude_action_toggle);
-        mAltitudeActionToggle.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (mPresenter != null) mPresenter.requestAltitudeFlightAction();
-            }
-        });
-        setAltitudeActionState(ALT_ACTION_HIDDEN);
 
         //initialize gamepad controller
         mGamepadController = new GamepadController(mControls, this, mPreferences);
@@ -732,44 +721,9 @@ public class MainActivity extends EspActivity {
                 if (mController instanceof TouchController) {
                     ((TouchController) mController).setAltitudeHoldControl(enabled);
                 }
-                setAltitudeActionState(enabled ? ALT_ACTION_TAKEOFF : ALT_ACTION_HIDDEN);
-            }
-        });
-    }
-
-    public void setAltitudeActionState(final int state) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (mAltitudeActionToggle == null) return;
-                if (state == ALT_ACTION_HIDDEN) {
-                    mAltitudeActionToggle.setVisibility(View.GONE);
-                    return;
-                }
-                mAltitudeActionToggle.setVisibility(View.VISIBLE);
-                if (state == ALT_ACTION_TAKING_OFF) {
-                    mAltitudeActionToggle.setText(R.string.altitude_action_taking_off);
-                } else if (state == ALT_ACTION_LAND) {
-                    mAltitudeActionToggle.setText(R.string.altitude_action_land);
-                } else if (state == ALT_ACTION_LANDING) {
-                    mAltitudeActionToggle.setText(R.string.altitude_action_landing);
-                } else {
-                    mAltitudeActionToggle.setText(R.string.altitude_action_takeoff);
-                }
-                mAltitudeActionToggle.setEnabled(state == ALT_ACTION_TAKEOFF || state == ALT_ACTION_LAND);
-                mAltitudeActionToggle.setBackgroundResource(
-                        state == ALT_ACTION_LAND ? R.drawable.custom_button_connected : R.drawable.custom_button);
-            }
-        });
-    }
-
-    public void resetAltitudeHoldAfterLanding() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (mController instanceof TouchController) {
-                    ((TouchController) mController).resetAltitudeHoldAfterLanding();
-                }
+                mPreferences.edit()
+                        .putBoolean(PreferencesActivity.KEY_RUNTIME_ALTITUDE_HOLD_ACTIVE, enabled)
+                        .apply();
             }
         });
     }

@@ -13,8 +13,6 @@ import se.bitcraze.crazyflie.lib.crazyradio.RadioDriver;
 import se.bitcraze.crazyflie.lib.crtp.CommanderPacket;
 import se.bitcraze.crazyflie.lib.crtp.CrtpDriver;
 import se.bitcraze.crazyflie.lib.crtp.CrtpPacket;
-import se.bitcraze.crazyflie.lib.crtp.LandPacket;
-import se.bitcraze.crazyflie.lib.crtp.TakeoffPacket;
 import se.bitcraze.crazyflie.lib.crtp.ZDistancePacket;
 import se.bitcraze.crazyflie.lib.log.LogAdapter;
 import se.bitcraze.crazyflie.lib.log.LogConfig;
@@ -53,12 +51,6 @@ public class MainPresenter {
     private boolean heightHold = false;
     private volatile boolean mConnectionFlightModeKnown;
     private volatile boolean mConnectionUsesAltitudeHold;
-    private volatile boolean mConnectionSupportsAutoTakeoff;
-    private volatile boolean mRidAirborneSeen;
-    private volatile int mLatestRidOperationState;
-    private volatile boolean mButtonTakeoffActive;
-    private volatile boolean mTakeoffAwaitingAirborne;
-    private volatile boolean mLandingRequested;
     private int mLastAltitudeHoldDisplayState = -1;
 
     private Thread mSendJoystickDataThread;
@@ -231,9 +223,6 @@ public class MainPresenter {
                     if (mConnectionUsesAltitudeHold && controller instanceof TouchController) {
                         TouchController touchController = (TouchController) controller;
                         thrustAbsolute = touchController.getAltitudeHoldThrustAbsolute();
-                        if (mLandingRequested) {
-                            thrustAbsolute = 0.0f;
-                        }
                         int displayState = touchController.getAltitudeHoldDisplayState();
                         if (displayState != mLastAltitudeHoldDisplayState) {
                             mLastAltitudeHoldDisplayState = displayState;
@@ -346,80 +335,22 @@ public class MainPresenter {
     }
 
     public void onFlightTelemetry(int flightMode, int ridOperationState) {
-        mLatestRidOperationState = ridOperationState;
         mainActivity.setRidOperationState(ridOperationState);
         if (!mConnectionFlightModeKnown) {
             mConnectionFlightModeKnown = true;
             mConnectionUsesAltitudeHold = flightMode == 0x01 || flightMode == 0x02;
-            mConnectionSupportsAutoTakeoff = flightMode == 0x01;
             mainActivity.configureAltitudeHoldControl(mConnectionUsesAltitudeHold);
         }
-        if (!mConnectionUsesAltitudeHold) return;
-        if (!mConnectionSupportsAutoTakeoff) {
-            mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_HIDDEN);
-            return;
-        }
-        if (ridOperationState == 0x02) {
-            mRidAirborneSeen = true;
-            mButtonTakeoffActive = false;
-            mTakeoffAwaitingAirborne = false;
-            mainActivity.setAltitudeActionState(mLandingRequested
-                    ? MainActivity.ALT_ACTION_LANDING : MainActivity.ALT_ACTION_LAND);
-        } else if (ridOperationState == 0x01 && mRidAirborneSeen) {
-            mRidAirborneSeen = false;
-            mLandingRequested = false;
-            mTakeoffAwaitingAirborne = false;
-            mainActivity.resetAltitudeHoldAfterLanding();
-            mLastAltitudeHoldDisplayState = TouchController.ALT_HOLD_STATE_LOCKED;
-            mainActivity.setAltitudeHoldState(TouchController.ALT_HOLD_STATE_LOCKED);
-            mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_TAKEOFF);
-        } else if (ridOperationState == 0x01 && !mButtonTakeoffActive && !mTakeoffAwaitingAirborne) {
-            mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_TAKEOFF);
-        }
-    }
-
-    public void requestAltitudeFlightAction() {
-        if (!mConnectionSupportsAutoTakeoff || mCrazyflie == null) return;
-        if (mLatestRidOperationState == 0x02) {
-            mLandingRequested = true;
-            mButtonTakeoffActive = false;
-            IController controller = mainActivity.getController();
-            if (controller instanceof TouchController) {
-                ((TouchController) controller).beginButtonLanding();
-            }
-            sendPacket(new LandPacket());
-            mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_LANDING);
-            return;
-        }
-        if (mLatestRidOperationState != 0x01 || mButtonTakeoffActive) return;
-        IController controller = mainActivity.getController();
-        if (!(controller instanceof TouchController)) return;
-        TouchController touchController = (TouchController) controller;
-        touchController.beginButtonTakeoff();
-        /* The firmware now owns the complete takeoff trajectory. Center the
-         * virtual throttle immediately instead of synthesizing a pulse. */
-        touchController.finishButtonTakeoff();
-        mTakeoffAwaitingAirborne = true;
-        mButtonTakeoffActive = true;
-        sendPacket(new TakeoffPacket(1.10f, 0.07f));
-        mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_TAKING_OFF);
     }
 
     private void resetFlightTelemetryState() {
         mConnectionFlightModeKnown = false;
         mConnectionUsesAltitudeHold = false;
-        mConnectionSupportsAutoTakeoff = false;
-        mRidAirborneSeen = false;
-        mLatestRidOperationState = 0;
-        mButtonTakeoffActive = false;
-        mTakeoffAwaitingAirborne = false;
-        mLandingRequested = false;
         mLastAltitudeHoldDisplayState = -1;
         if (mainActivity != null) {
             mainActivity.configureAltitudeHoldControl(false);
             mainActivity.setAltitudeHoldState(-1);
             mainActivity.setRidOperationState(0x00);
-            mainActivity.setAltitudeActionState(MainActivity.ALT_ACTION_HIDDEN);
         }
     }
 

@@ -94,6 +94,7 @@ public class PreferencesActivity extends PreferenceActivity {
     public static final String KEY_PREF_GYRO_AMP = "pref_gyro_amp";
     public static final String KEY_PREF_BTN_SCREEN = "pref_btn_screen";
     public static final String KEY_PREF_TOUCH_THRUST_FULL_TRAVEL = "pref_touch_thrust_full_travel";
+    public static final String KEY_RUNTIME_ALTITUDE_HOLD_ACTIVE = "runtime_altitude_hold_active";
     public static final String KEY_PREF_RIGHT_ANALOG_X_AXIS = "pref_right_analog_x_axis";
     public static final String KEY_PREF_RIGHT_ANALOG_Y_AXIS = "pref_right_analog_y_axis";
     public static final String KEY_PREF_LEFT_ANALOG_X_AXIS = "pref_left_analog_x_axis";
@@ -429,6 +430,9 @@ public class PreferencesActivity extends PreferenceActivity {
                 setSummaryArray(key, R.string.preferences_controller_defaultValue, R.array.controllerEntries, 0);
                 setControllerSpecificPreferences();
             }
+            if (key.equals(KEY_RUNTIME_ALTITUDE_HOLD_ACTIVE)) {
+                setControllerSpecificPreferences();
+            }
 
             if (key.equals(KEY_PREF_USE_GYRO_BOOL)) {
                 CheckBoxPreference pref = (CheckBoxPreference) findPreference(key);
@@ -572,7 +576,22 @@ public class PreferencesActivity extends PreferenceActivity {
                 findPreference(KEY_PREF_GYRO_AMP).setEnabled(controllerIndex == 0 && useGyro);
             }
             findPreference(KEY_PREF_BTN_SCREEN).setEnabled(controllerIndex == 1);
-            findPreference(KEY_PREF_TOUCH_THRUST_FULL_TRAVEL).setEnabled(controllerIndex == 0);
+            CheckBoxPreference fullTravel = (CheckBoxPreference)
+                    findPreference(KEY_PREF_TOUCH_THRUST_FULL_TRAVEL);
+            boolean altitudeHoldActive = mSharedPreferences.getBoolean(
+                    KEY_RUNTIME_ALTITUDE_HOLD_ACTIVE, false);
+            if (altitudeHoldActive) {
+                // Display the forced runtime value without overwriting the
+                // user's saved manual-mode preference.
+                fullTravel.setPersistent(false);
+                fullTravel.setChecked(true);
+                fullTravel.setEnabled(false);
+            } else {
+                fullTravel.setPersistent(true);
+                fullTravel.setChecked(mSharedPreferences.getBoolean(
+                        KEY_PREF_TOUCH_THRUST_FULL_TRAVEL, true));
+                fullTravel.setEnabled(controllerIndex == 0);
+            }
             findPreference(KEY_PREF_JOYSTICK_SIZE).setEnabled(controllerIndex == 0);
         }
 
@@ -637,6 +656,7 @@ public class PreferencesActivity extends PreferenceActivity {
             super.onResume();
             getPreferenceScreen().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
             checkGyroSensors();
+            setControllerSpecificPreferences();
         }
 
         @Override

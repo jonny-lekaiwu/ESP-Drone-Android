@@ -750,6 +750,21 @@ public class MainActivity extends EspActivity {
         });
     }
 
+    public void lockAltitudeHoldAfterLanding() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mController instanceof TouchController) {
+                    ((TouchController) mController).lockAltitudeHoldAfterLanding();
+                }
+                if (mFlightDataView != null) {
+                    mFlightDataView.setAltitudeHoldState(
+                            TouchController.ALT_HOLD_STATE_LOCKED);
+                }
+            }
+        });
+    }
+
     public void setRidOperationState(final int state) {
         runOnUiThread(new Runnable() {
             @Override

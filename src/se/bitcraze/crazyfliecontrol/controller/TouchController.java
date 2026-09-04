@@ -93,6 +93,11 @@ public class TouchController extends AbstractController {
         updateAutoReturnMode();
     }
 
+    public void lockAltitudeHoldAfterLanding() {
+        if (!mAltitudeHoldControl) return;
+        mAltitudeHoldUnlocked = false;
+    }
+
     public float getAltitudeHoldThrustAbsolute() {
         if (!mAltitudeHoldControl || !mAltitudeHoldUnlocked) return 0.0f;
         float input = isThrustRightAnalog() ? mControls.getRightAnalog_Y() : mControls.getLeftAnalog_Y();

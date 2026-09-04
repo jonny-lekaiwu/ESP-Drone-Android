@@ -52,6 +52,8 @@ public class MainPresenter {
     private volatile boolean mConnectionFlightModeKnown;
     private volatile boolean mConnectionUsesAltitudeHold;
     private int mLastAltitudeHoldDisplayState = -1;
+    private int mLastRidOperationState = 0x00;
+    private boolean mRidAirborneObserved;
 
     private Thread mSendJoystickDataThread;
     private ConsoleListener mConsoleListener;
@@ -335,18 +337,31 @@ public class MainPresenter {
     }
 
     public void onFlightTelemetry(int flightMode, int ridOperationState) {
-        mainActivity.setRidOperationState(ridOperationState);
         if (!mConnectionFlightModeKnown) {
             mConnectionFlightModeKnown = true;
             mConnectionUsesAltitudeHold = flightMode == 0x01 || flightMode == 0x02;
             mainActivity.configureAltitudeHoldControl(mConnectionUsesAltitudeHold);
         }
+        mainActivity.setRidOperationState(ridOperationState);
+        if (ridOperationState == 0x02) {
+            mRidAirborneObserved = true;
+        } else if (ridOperationState == 0x01 &&
+                mRidAirborneObserved && mLastRidOperationState != 0x01) {
+            mRidAirborneObserved = false;
+            if (mConnectionUsesAltitudeHold) {
+                mLastAltitudeHoldDisplayState = TouchController.ALT_HOLD_STATE_LOCKED;
+                mainActivity.lockAltitudeHoldAfterLanding();
+            }
+        }
+        mLastRidOperationState = ridOperationState;
     }
 
     private void resetFlightTelemetryState() {
         mConnectionFlightModeKnown = false;
         mConnectionUsesAltitudeHold = false;
         mLastAltitudeHoldDisplayState = -1;
+        mLastRidOperationState = 0x00;
+        mRidAirborneObserved = false;
         if (mainActivity != null) {
             mainActivity.configureAltitudeHoldControl(false);
             mainActivity.setAltitudeHoldState(-1);

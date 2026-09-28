@@ -4,7 +4,7 @@ TinyDrone is an Android controller for the TinyDrone aircraft. It sends flight-c
 
 The Android application ID is `com.tinydrone.android`. GitHub Actions produces a versioned `TinyDrone-vX.Y.Z.apk` debug package for test installation.
 
-The original project is ESP-Drone-Android[https://github.com/EspressifApps/ESP-Drone-Android] 
+The original project is [ESP-Drone-Android](https://github.com/EspressifApps/ESP-Drone-Android) 
 
 ## Remote ID station data
 

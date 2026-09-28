@@ -1,0 +1,260 @@
+package se.bitcraze.crazyfliecontrol2;
+
+import android.content.Context;
+import android.net.wifi.WifiManager;
+import android.util.Log;
+
+import androidx.lifecycle.Observer;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import se.bitcraze.crazyflie.lib.crtp.CrtpDriver;
+import se.bitcraze.crazyflie.lib.crtp.CrtpPacket;
+
+public class EspUdpDriver extends CrtpDriver {
+    private static final String TAG = "EspUdpDriver";
+
+    private static final int APP_PORT = 2399;
+    private static final int DEVICE_PORT = 2390;
+    private static final String DEVICE_ADDRESS = "192.168.26.28";
+
+    private volatile boolean mConnectMark = false;
+    private volatile DatagramSocket mSocket;
+    private volatile ReceiveThread mReceiveThread;
+    private volatile PostThread mPostThread;
+    private final RidStationSender mRidStationSender;
+
+    private final EspActivity mActivity;
+    private final BlockingQueue<CrtpPacket> mInQueue;
+    private final WifiManager mWifiManager;
+
+    private Observer<String> mObserver = new Observer<String>(){
+        @Override
+        public void onChanged(String s) {
+            TinyDroneLog.write("UDP", "Network observer fired: " + s);
+            int networkId = mWifiManager.getConnectionInfo().getNetworkId();
+            TinyDroneLog.write("UDP", "Wi-Fi networkId=" + networkId + ", connectMark=" + mConnectMark);
+            if (networkId == -1) {
+                disconnect();
+                notifyConnectionLost("No SoftAP connection");
+            } else {
+                if (mConnectMark) {
+                    mConnectMark = false;
+                    try {
+                        InetAddress deviceAddress = InetAddress.getByName(DEVICE_ADDRESS);
+                        TinyDroneLog.write("UDP", "Resolved drone address; creating socket");
+                        mSocket = new DatagramSocket(null);
+                        mSocket.setReuseAddress(true);
+                        mSocket.bind(new InetSocketAddress(APP_PORT));
+                        TinyDroneLog.write("UDP", "Bound local UDP port " + APP_PORT);
+                        mReceiveThread = new ReceiveThread(mSocket);
+                        mReceiveThread.setPacketQueue(mInQueue);
+                        mReceiveThread.start();
+                        mPostThread = new PostThread(mSocket, deviceAddress);
+                        mPostThread.start();
+                        notifyConnected();
+                        TinyDroneLog.write("UDP", "Legacy control connection notified; starting RID");
+                        // RID is auxiliary. Start it only after the legacy control link is
+                        // established, and never let a device-specific location failure
+                        // tear down the flight-control connection.
+                        try {
+                            mRidStationSender.start();
+                        } catch (RuntimeException e) {
+                            TinyDroneLog.write("RID", "RID start failed but control remains connected", e);
+                            Log.e(TAG, "RID station sender unavailable", e);
+                            mRidStationSender.stop();
+                        }
+                    } catch (IOException e) {
+                        TinyDroneLog.write("UDP", "Socket connection failed", e);
+                        if (mSocket != null) {
+                            mSocket.close();
+                            mSocket = null;
+                        }
+                        mActivity.removeBroadcastObserver(mObserver);
+                        notifyConnectionFailed("Create socket failed");
+                    }
+                }
+            }
+        }
+    };
+
+    public EspUdpDriver(EspActivity activity) {
+        TinyDroneLog.write("UDP", "EspUdpDriver constructor entered");
+        mActivity = activity;
+        mWifiManager = (WifiManager) activity.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        mInQueue = new LinkedBlockingQueue<>();
+        mRidStationSender = new RidStationSender(activity, this);
+        TinyDroneLog.write("UDP", "EspUdpDriver constructor complete");
+    }
+
+    @Override
+    public void connect() throws IOException {
+        Log.w(TAG, "Connect()");
+        TinyDroneLog.write("UDP", "connect() entered");
+        if (mSocket != null) {
+            throw new IllegalStateException("Connection already started");
+        }
+
+        mConnectMark = true;
+        notifyConnectionRequested();
+        mActivity.observeBroadcast(mActivity, mObserver);
+    }
+
+    @Override
+    public void disconnect() {
+        mActivity.removeBroadcastObserver(mObserver);
+        mRidStationSender.stop();
+        if (mSocket != null) {
+            mSocket.close();
+            mSocket = null;
+            mReceiveThread.interrupt();
+            mReceiveThread.setPacketQueue(null);
+            mReceiveThread = null;
+            mPostThread.interrupt();
+            mPostThread = null;
+            notifyDisconnected();
+        }
+    }
+
+    @Override
+    public boolean isConnected() {
+        return mSocket != null && !mSocket.isClosed();
+    }
+
+    @Override
+    public void sendPacket(CrtpPacket packet) {
+        if (mSocket == null || mPostThread == null) {
+            return;
+        }
+
+        mPostThread.sendPacket(packet);
+    }
+
+    @Override
+    public CrtpPacket receivePacket(int wait) {
+        try {
+            return mInQueue.poll(wait, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Log.w(TAG, "ReceivePacket Interrupted");
+            return null;
+        }
+    }
+
+    private static class PostThread extends Thread {
+        private BlockingQueue<CrtpPacket> mmQueue = new LinkedBlockingQueue<>();
+        private DatagramSocket mmSocket;
+        private InetAddress mmDevAddress;
+
+        PostThread(DatagramSocket socket, InetAddress devAddress) {
+            mmSocket = socket;
+            mmDevAddress = devAddress;
+        }
+
+        void sendPacket(CrtpPacket packet) {
+            mmQueue.add(packet);
+        }
+
+        @Override
+        public void run() {
+            while (!mmSocket.isClosed() && !isInterrupted()) {
+                try {
+                    CrtpPacket packet = mmQueue.take();
+                    byte[] data = packet.toByteArray();
+                    byte[] buf = new byte[data.length + 1];
+                    System.arraycopy(data, 0, buf, 0, data.length);
+                    int checksum = 0;
+                    for (byte b : data) {
+                        checksum += (b & 0xff);
+                    }
+                    buf[buf.length - 1] = (byte) checksum;
+                    DatagramPacket udpPacket = new DatagramPacket(buf, buf.length, mmDevAddress, DEVICE_PORT);
+                    mmSocket.send(udpPacket);
+                } catch (IOException e) {
+                    Log.w(TAG, "sendPacket: IOException: " + e.getMessage());
+                    mmSocket.close();
+                    break;
+                } catch (InterruptedException e) {
+                    break;
+                } catch (RuntimeException e) {
+                    // A malformed auxiliary packet must never terminate the
+                    // process or the legacy control connection.
+                    TinyDroneLog.write("UDP", "Discarding packet that failed to serialize", e);
+                }
+            }
+
+            Log.d(TAG, "run: PostThread End");
+        }
+    }
+
+    private class ReceiveThread extends Thread {
+        private DatagramSocket mmSocket;
+        private BlockingQueue<CrtpPacket> mmQueue;
+
+        ReceiveThread(DatagramSocket socket) {
+            mmSocket = socket;
+        }
+
+        void setPacketQueue(BlockingQueue<CrtpPacket> queue) {
+            mmQueue = queue;
+        }
+
+        @Override
+        public void run() {
+            byte[] buf = new byte[1024];
+            DatagramPacket udpPacket = new DatagramPacket(buf, buf.length);
+            while (!mmSocket.isClosed() && !isInterrupted()) {
+                try {
+                    mmSocket.receive(udpPacket);
+                    Log.w(TAG, "run: ReceiveData");
+                    byte[] raw = udpPacket.getData();
+                    byte[] data = new byte[udpPacket.getLength() - 1];
+                    System.arraycopy(udpPacket.getData(), udpPacket.getOffset(), data, 0, data.length);
+                    int checksum = 0;
+                    for (byte b : data) {
+                        checksum += (b & 0xff);
+                    }
+                    if (raw[udpPacket.getLength() - 1] != (byte)checksum) {
+                        Log.w(TAG, "Receive Invalid packet");
+                        continue;
+                    }
+                    // Controller telemetry format: port 8/channel 1, id 0,
+                    // then a little-endian IEEE-754 battery voltage.
+                    int header = data[0] & 0xff;
+                    if (((header >> 4) & 0x0f) == 8 && (header & 0x03) == 1 &&
+                            data.length >= 6 && data[1] == 0) {
+                        float voltage = ByteBuffer.wrap(data, 2, 4)
+                                .order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                        if (voltage >= 0.0f && voltage <= 10.0f && mActivity instanceof MainActivity) {
+                            ((MainActivity) mActivity).setBatteryLevel(voltage);
+                        }
+                        if (data.length >= 13 && mActivity instanceof MainActivity) {
+                            float relativeHeight = ByteBuffer.wrap(data, 6, 4)
+                                    .order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                            ((MainActivity) mActivity).setFlightTelemetry(
+                                    relativeHeight, data[10] & 0xff, data[12] & 0xff);
+                        }
+                    }
+                    CrtpPacket packet = new CrtpPacket(data);
+                    if (mmQueue != null) {
+                        mmQueue.add(packet);
+                    }
+                } catch (IOException e) {
+                    Log.w(TAG, "receivePacket: IOException: " + e.getMessage());
+                    mmSocket.close();
+                    break;
+                }
+            }
+
+            Log.d(TAG, "run: ReceiveThread End");
+        }
+    }
+}

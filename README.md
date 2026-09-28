@@ -4,6 +4,8 @@ TinyDrone is an Android controller for the TinyDrone aircraft. It sends flight-c
 
 The Android application ID is `com.tinydrone.android`. GitHub Actions produces a versioned `TinyDrone-vX.Y.Z.apk` debug package for test installation.
 
+The original project is ESP-Drone-Android[https://github.com/EspressifApps/ESP-Drone-Android] 
+
 ## Remote ID station data
 
 While connected to the TinyDrone Wi-Fi controller, the app requests the phone's WGS-84 location and sends a station update once per second through CRTP port `0x0D`, channel `0x02`. The 24-byte little-endian payload contains longitude and latitude multiplied by `1e7`, WGS-84 altitude in centimetres, and a 48-bit Unix millisecond timestamp. The existing UDP transport adds the CRTP header and modulo-256 checksum before sending to `192.168.43.42:2390`.

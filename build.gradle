@@ -30,6 +30,9 @@ android {
 
     buildTypes {
         debug {
+            if (project.hasProperty('diagnosticsApk')) {
+                applicationIdSuffix '.diagnostics'
+            }
             sourceSets {
                 main {
                     manifest.srcFile 'AndroidManifest.xml'

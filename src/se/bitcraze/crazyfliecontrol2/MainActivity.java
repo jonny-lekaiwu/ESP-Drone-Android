@@ -372,7 +372,8 @@ public class MainActivity extends EspActivity {
                     return;
                 }
                 try {
-                    flightDiagnostics = new FlightDiagnostics(driver, saved);
+                    flightDiagnostics = new FlightDiagnostics(driver, saved,
+                            () -> showToastie(flightDiagnostics.result));
                     driver.diagnostics = flightDiagnostics;
                     flightDiagnostics.start();
                     showToastie("正在初始化诊断日志");

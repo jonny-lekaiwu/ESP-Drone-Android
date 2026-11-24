@@ -11,8 +11,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,11 +29,18 @@ final class FlightDiagnostics extends Thread {
             {"posCtl.targetVX", "posCtl.targetVY", "posCtl.targetVZ",
                     "stateEstimate.vx", "stateEstimate.vy", "stateEstimate.vz"},
             {"stateEstimate.roll", "stateEstimate.pitch", "stateEstimate.yaw",
-                    "motion.deltaX", "motion.deltaY", "motion.squal"}
+                    "motion.deltaX", "motion.deltaY", "motion.squal"},
+            {"stateEstimate.x", "stateEstimate.y", "stateEstimate.z",
+                    "ctrltarget.vx", "ctrltarget.vy"},
+            {"kalman_pred.predNX", "kalman_pred.measNX", "kalman_pred.predNY",
+                    "kalman_pred.measNY", "kalman_pred.flowUpdates", "motion.motion", "motion.shutter"},
+            {"posHoldDiag.inputRoll", "posHoldDiag.inputPitch", "posHoldDiag.inputThrust",
+                    "posHoldDiag.takeoffActive", "kalman_pred.flowDt", "kalman_pred.flowStd"}
     };
 
     private final EspUdpDriver driver;
     private final File file;
+    private final Runnable onStatusChanged;
     private final ArrayBlockingQueue<byte[]> replies = new ArrayBlockingQueue<>(32);
     private final ArrayBlockingQueue<byte[]> samples = new ArrayBlockingQueue<>(512);
     private final AtomicInteger dropped = new AtomicInteger();
@@ -62,10 +71,11 @@ final class FlightDiagnostics extends Thread {
         }
     }
 
-    FlightDiagnostics(EspUdpDriver driver, File file) {
+    FlightDiagnostics(EspUdpDriver driver, File file, Runnable onStatusChanged) {
         super("flight-diagnostics");
         this.driver = driver;
         this.file = file;
+        this.onStatusChanged = onStatusChanged;
     }
 
     void receive(byte[] packet) {
@@ -177,17 +187,33 @@ final class FlightDiagnostics extends Thread {
             output.write("phone_elapsed_ms,drone_timestamp_24bit,block,field,value\n");
             try {
                 readToc();
+                if (recording && (!fields.containsKey("posHoldDiag.inputPitch")
+                        || !fields.containsKey("kalman_pred.flowUpdates"))) {
+                    throw new IOException("请先刷入配套的 POS_HOLD 漂移诊断固件");
+                }
                 if (recording) startBlocks(output);
-                if (recording) result = "正在录制飞行诊断";
+                Set<Integer> awaitingBlocks = new HashSet<>(blocks.keySet());
+                long readyDeadline = SystemClock.elapsedRealtime() + 3000;
                 long lastFlush = SystemClock.elapsedRealtime();
                 long lastLogSample = lastFlush;
                 while (recording && driver.isConnected()) {
                     byte[] packet = samples.poll(200, TimeUnit.MILLISECONDS);
                     if (packet != null) {
                         writeSample(output, packet);
-                        if ((packet[0] & 0xf0) == 0x50) lastLogSample = SystemClock.elapsedRealtime();
+                        if (packet.length >= 5 && (packet[0] & 0xf0) == 0x50) {
+                            lastLogSample = SystemClock.elapsedRealtime();
+                            if (awaitingBlocks.remove(packet[1] & 255) && awaitingBlocks.isEmpty()
+                                    && recording) {
+                                result = "诊断录制已就绪，可以开始测试";
+                                output.write(lastLogSample + ",,event,capture_ready,1\n");
+                                onStatusChanged.run();
+                            }
+                        }
                     }
                     long now = SystemClock.elapsedRealtime();
+                    if (!awaitingBlocks.isEmpty() && now >= readyDeadline) {
+                        throw new IOException("部分诊断日志块未收到数据 " + awaitingBlocks);
+                    }
                     if (now - lastLogSample > 3000) throw new IOException("未收到飞控日志数据");
                     if (now - lastFlush >= 1000) {
                         output.flush();
@@ -199,7 +225,10 @@ final class FlightDiagnostics extends Thread {
                 result = "诊断已停止，可以导出";
             } catch (IOException e) {
                 result = recording ? e.getMessage() : "诊断已停止，可以导出";
-                if (recording) output.write(",,error,diagnostics,\n");
+                if (recording) {
+                    onStatusChanged.run();
+                    output.write(",,error,diagnostics,\n");
+                }
             }
             output.write(",,summary,dropped_phone_packets," + dropped.get() + "\n");
         } catch (IOException | InterruptedException e) {

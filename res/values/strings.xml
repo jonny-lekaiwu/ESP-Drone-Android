@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">TinyDrone 诊断版</string>
+    <string name="app_name">TinyDrone 漂移诊断</string>
     <string name="title_activity_main">@string/app_name</string>
     <string name="flight_diagnostics_title">飞行诊断</string>
     <string name="flight_diagnostics_preference_summary">开启后，可在飞行界面开始录制、停止录制和导出 CSV。</string>

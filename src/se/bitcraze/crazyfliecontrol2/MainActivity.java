@@ -341,13 +341,7 @@ public class MainActivity extends EspActivity {
         });
 
         ImageButton settingsButton = (ImageButton) findViewById(R.id.imageButton_settings);
-        settingsButton.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View view) {
-                showFlightDiagnostics();
-                return true;
-            }
-        });
+        findViewById(R.id.button_flight_diagnostics).setOnClickListener(v -> showFlightDiagnostics());
         settingsButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -368,7 +362,7 @@ public class MainActivity extends EspActivity {
         if (recorder != null && recorder.isAlive()) {
             dialog.setPositiveButton("停止录制", (d, which) -> {
                 recorder.recording = false;
-                showToastie("正在保存。再次长按设置可导出。");
+                showToastie("正在保存。保存后可从「飞行诊断」导出。");
             });
         } else {
             dialog.setPositiveButton("开始录制", (d, which) -> {
@@ -532,6 +526,9 @@ public class MainActivity extends EspActivity {
     @Override
     public void onResume() {
         super.onResume();
+        findViewById(R.id.button_flight_diagnostics).setVisibility(
+                mPreferences.getBoolean(PreferencesActivity.KEY_PREF_FLIGHT_DIAGNOSTICS, false)
+                        ? View.VISIBLE : View.GONE);
         //TODO: improve
         PreferencesActivity.setDefaultJoystickSize(this);
         mJoystickViewLeft.setPreferences(mPreferences);

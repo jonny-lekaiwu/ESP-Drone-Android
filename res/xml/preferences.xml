@@ -328,6 +328,12 @@
 
     </Preference>
 
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="pref_flight_diagnostics"
+        android:title="@string/flight_diagnostics_title"
+        android:summary="@string/flight_diagnostics_preference_summary" />
+
     <Preference
         android:key="pref_origin_project"
         android:title="@string/preferences_origin_project"/>

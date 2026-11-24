@@ -119,6 +119,7 @@ public class PreferencesActivity extends PreferenceActivity {
     public static final String KEY_PREF_SCREEN_ROTATION_LOCK_BOOL = "pref_screen_rotation_lock_bool";
     public static final String KEY_PREF_IMMERSIVE_MODE_BOOL = "pref_immersive_mode_bool";
     public static final String KEY_PREF_SHOW_CONSOLE_BOOL = "pref_show_console_bool";
+    public static final String KEY_PREF_FLIGHT_DIAGNOSTICS = "pref_flight_diagnostics";
     public static final String KEY_PREF_CAMERA_FLIP_ENABLED = "pref_camera_flip_enabled";
     public static final String KEY_PREF_CAMERA_FLIP_HORIZONTAL = "pref_camera_flip_horizontal";
     public static final String KEY_PREF_CAMERA_FLIP_VERTICAL = "pref_camera_flip_vertical";

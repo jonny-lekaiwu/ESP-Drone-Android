@@ -28,6 +28,9 @@
 package se.bitcraze.crazyfliecontrol2;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Locale;
 
@@ -133,6 +136,9 @@ public class MainActivity extends EspActivity {
     private TextView mTextView_battery;
     private TextView mTextView_linkQuality;
     private MainPresenter mPresenter;
+    private static final int SAVE_FLIGHT_DIAGNOSTICS = 83;
+    private FlightDiagnostics flightDiagnostics;
+    private File exportDiagnostics;
     private final Handler mBatteryWarningHandler = new Handler();
     private boolean mLowBatteryWarningActive;
     private boolean mBatteryWarningRed;
@@ -335,6 +341,13 @@ public class MainActivity extends EspActivity {
         });
 
         ImageButton settingsButton = (ImageButton) findViewById(R.id.imageButton_settings);
+        settingsButton.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                showFlightDiagnostics();
+                return true;
+            }
+        });
         settingsButton.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -343,6 +356,69 @@ public class MainActivity extends EspActivity {
               startActivity(intent);
             }
         });
+    }
+
+    private void showFlightDiagnostics() {
+        final FlightDiagnostics recorder = flightDiagnostics;
+        final File saved = new File(getFilesDir(), "TinyDrone-flight.csv");
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this)
+                .setTitle("飞行诊断")
+                .setMessage(recorder == null ? "通过 Wi-Fi 连接后可录制飞控遥测。" : recorder.result)
+                .setNegativeButton("关闭", null);
+        if (recorder != null && recorder.isAlive()) {
+            dialog.setPositiveButton("停止录制", (d, which) -> {
+                recorder.recording = false;
+                showToastie("正在保存。再次长按设置可导出。");
+            });
+        } else {
+            dialog.setPositiveButton("开始录制", (d, which) -> {
+                EspUdpDriver driver = mPresenter.getDiagnosticDriver();
+                if (driver == null) {
+                    showToastie("请先连接无人机 Wi-Fi");
+                    return;
+                }
+                try {
+                    flightDiagnostics = new FlightDiagnostics(driver, saved);
+                    driver.diagnostics = flightDiagnostics;
+                    flightDiagnostics.start();
+                    showToastie("正在初始化诊断日志");
+                } catch (RuntimeException e) {
+                    showToastie("无法创建诊断文件");
+                }
+            });
+            if (saved.length() > 0 && Build.VERSION.SDK_INT >= 19) {
+                dialog.setNeutralButton("导出 CSV", (d, which) -> {
+                    exportDiagnostics = saved;
+                    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("text/csv");
+                    intent.putExtra(Intent.EXTRA_TITLE, exportDiagnostics.getName());
+                    startActivityForResult(intent, SAVE_FLIGHT_DIAGNOSTICS);
+                });
+            }
+        }
+        dialog.show();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, final Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != SAVE_FLIGHT_DIAGNOSTICS || resultCode != RESULT_OK ||
+                data == null || data.getData() == null || exportDiagnostics == null) return;
+        final File source = exportDiagnostics;
+        new Thread(() -> {
+            try (FileInputStream input = new FileInputStream(source);
+                 OutputStream output = getContentResolver().openOutputStream(data.getData())) {
+                if (output == null) throw new IOException("Cannot open export file");
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            } catch (IOException e) {
+                showToastie("诊断日志导出失败");
+                return;
+            }
+            showToastie("诊断日志已导出");
+        }, "flight-diagnostics-export").start();
     }
 
     private void connectCrazyradio() {
@@ -498,6 +574,7 @@ public class MainActivity extends EspActivity {
 
     @Override
     protected void onDestroy() {
+        if (flightDiagnostics != null) flightDiagnostics.recording = false;
         Log.d(LOG_TAG, "onDestroy()");
         stopLowBatteryWarning();
         unregisterReceiver(mUsbReceiver);

@@ -125,6 +125,8 @@ public class EspUdpDriver extends CrtpDriver {
         }
     }
 
+    volatile FlightDiagnostics diagnostics;
+
     @Override
     public boolean isConnected() {
         return mSocket != null && !mSocket.isClosed();
@@ -213,7 +215,9 @@ public class EspUdpDriver extends CrtpDriver {
             DatagramPacket udpPacket = new DatagramPacket(buf, buf.length);
             while (!mmSocket.isClosed() && !isInterrupted()) {
                 try {
+                    udpPacket.setLength(buf.length);
                     mmSocket.receive(udpPacket);
+                    if (udpPacket.getLength() < 2) continue;
                     Log.w(TAG, "run: ReceiveData");
                     byte[] raw = udpPacket.getData();
                     byte[] data = new byte[udpPacket.getLength() - 1];
@@ -241,7 +245,14 @@ public class EspUdpDriver extends CrtpDriver {
                                     .order(ByteOrder.LITTLE_ENDIAN).getFloat();
                             ((MainActivity) mActivity).setFlightTelemetry(
                                     relativeHeight, data[10] & 0xff, data[12] & 0xff);
+                            FlightDiagnostics recorder = diagnostics;
+                            if (recorder != null) recorder.receiveFlightMode(data);
                         }
+                    }
+                    FlightDiagnostics recorder = diagnostics;
+                    if (recorder != null && (data[0] & 0xf0) == 0x50) {
+                        recorder.receive(data);
+                        continue;
                     }
                     CrtpPacket packet = new CrtpPacket(data);
                     if (mmQueue != null) {

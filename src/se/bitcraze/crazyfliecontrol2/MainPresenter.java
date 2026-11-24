@@ -313,7 +313,15 @@ public class MainPresenter {
         }
     }
 
+    EspUdpDriver getDiagnosticDriver() {
+        return mDriver instanceof EspUdpDriver && mDriver.isConnected() ? (EspUdpDriver) mDriver : null;
+    }
+
     public void disconnect() {
+        if (mDriver instanceof EspUdpDriver) {
+            FlightDiagnostics recorder = ((EspUdpDriver) mDriver).diagnostics;
+            if (recorder != null) recorder.recording = false;
+        }
         Log.d(LOG_TAG, "disconnect()");
         resetFlightTelemetryState();
         // kill sendJoystickDataThread first to avoid NPE
